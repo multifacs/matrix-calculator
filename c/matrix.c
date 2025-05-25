@@ -1,19 +1,19 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <math.h>
 #include <time.h>
 #include "matrix.h"
 
 #define TOLERANCE       1e-10
 
-#define UBLK            "\e[4;30m"
-#define URED            "\e[4;31m"
-#define UGRN            "\e[4;32m"
-#define UYEL            "\e[4;33m"
-#define UBLU            "\e[4;34m"
-#define UMAG            "\e[4;35m"
-#define UCYN            "\e[4;36m"
-#define COLOR_RESET     "\e[0m"
+#define URED            "\e[4;31m"      // Errors
+#define UGRN            "\e[4;32m"      // Results
+#define UYEL            "\e[4;33m"      // Information/warnings
+#define UBLU            "\e[4;34m"      // Inputs
+#define UCYN            "\e[4;36m"      // Menus
+#define COLOR_RESET     "\e[0m"         // Color reeset
+
 
 // Function for creating matrix
 matrix create_matrix(int rows, int cols) {
@@ -22,13 +22,13 @@ matrix create_matrix(int rows, int cols) {
     m.cols = cols;
     m.data = (double**)malloc(rows * sizeof(double *));
     if (m.data == NULL) {
-        fprintf(stderr, "Error: Failed to allocate memory for matrix rows.\n");
+        fprintf(stderr, "%sError: Failed to allocate memory for matrix rows.\n%s", URED, COLOR_RESET);
         return m;
     }
     for (int i = 0; i < rows; i++) {
         m.data[i] = (double *)malloc(cols * sizeof(double));
         if (m.data[i] == NULL) {
-            fprintf(stderr, "Error: Failed to allocate memory for matrix row %d.\n", i);
+            fprintf(stderr, "%sError: Failed to allocate memory for matrix row %d.\n%s", URED, i, COLOR_RESET);
             for (int k = 0; k < i; k++) free(m.data[k]);
             free(m.data);
             m.data = NULL;
@@ -52,15 +52,15 @@ void free_matrix(matrix *m) {
 
 // Function for input of matrix elements
 void input_matrix(matrix *m) {
-    printf("Input matrix elements (%d x %d):\n", m->rows, m->cols);
+    printf("%sInput matrix elements (%d x %d):\n%s", UBLU, m->rows, m->cols, COLOR_RESET);
     for (int i = 0; i < m->rows; i++) {
         for (int j = 0; j < m->cols; j++) {
-            printf("Element [%d][%d]: ", i, j);
+            printf("%sElement [%d][%d]: %s", UBLU, i, j, COLOR_RESET);
             while (scanf("%lf", &m->data[i][j]) != 1) {
                 int c;
                 while ((c = getchar()) != '\n' && c != EOF);
-                printf("Invalid input. Please enter a number.\n");
-                printf("Element [%d][%d]: ", i, j);
+                printf("%sInvalid input. Please enter a number.\n%s", URED, COLOR_RESET);
+                printf("%sElement [%d][%d]: %s", UBLU, i, j, COLOR_RESET);
             }
         }
     }
@@ -71,18 +71,53 @@ void input_matrix(matrix *m) {
 // Function for matrix output
 void print_matrix(matrix m)
 {
-    printf("matrix [%d x %d]:\n", m.rows, m.cols);
+    printf("%sMatrix [%d x %d]:\n%s", UYEL, m.rows, m.cols, COLOR_RESET);
+
+    int max_width = 0;
+    char buffer[50];
     for (int i = 0; i < m.rows; i++) {
         for (int j = 0; j < m.cols; j++) {
             double val = m.data[i][j];
             if (fabs(fmod(val, 1.0)) < TOLERANCE) {
-                printf("%d\t", (int)val);
+                snprintf(buffer, sizeof(buffer), "%d", (int)val);
             } else {
-                printf("%.2f\t", val);
+                snprintf(buffer, sizeof(buffer), "%.2f", val);
+            }
+            int len = strlen(buffer);
+            if (len > max_width) {
+                max_width = len;
             }
         }
-        printf("\n");
     }
+
+    printf("+");
+    for (int j = 0; j < m.cols; j++) {
+        for (int k = 0; k < max_width + 2; k++) {
+            printf("-");
+        }
+    }
+    printf("+\n");
+
+    for (int i = 0; i < m.rows; i++) {
+        printf("|");
+        for (int j = 0; j < m.cols; j++) {
+            double val = m.data[i][j];
+            if (fabs(fmod(val, 1.0)) < TOLERANCE) {
+                printf(" %*d ", max_width, (int)val);
+            } else {
+                printf(" %*.2f ", max_width, val);
+            }
+        }
+        printf("|\n");
+    }
+
+    printf("+");
+    for (int j = 0; j < m.cols; j++) {
+        for (int k = 0; k < max_width + 2; k++) {
+            printf("-");
+        }
+    }
+    printf("+\n");
 }
 
 //Function for generation of random matrix
@@ -206,7 +241,7 @@ matrix add_matrices(matrix a, matrix b)
 {
     if (a.rows != b.rows || a.cols != b.cols)
     {
-        printf("Error: matrices must have the same dimensions for addition.\n");
+        printf("%sError: matrices must have the same dimensions for addition.\n%s", URED, COLOR_RESET);
         exit(1);
     }
     matrix result = create_matrix(a.rows, a.cols);
@@ -225,7 +260,7 @@ matrix subtract_matrices(matrix a, matrix b)
 {
     if (a.rows != b.rows || a.cols != b.cols)
     {
-        printf("Error: matrices must have the same dimensions for subtraction.\n");
+        printf("%sError: matrices must have the same dimensions for subtraction.\n%s", URED, COLOR_RESET);
         exit(1);
     }
     matrix result = create_matrix(a.rows, a.cols);
@@ -244,7 +279,7 @@ matrix multiply_matrices(matrix a, matrix b)
 {
     if (a.cols != b.rows)
     {
-        printf("Error: number of columns in first matrix must equal number of rows in second matrix for multiplication.\n");
+        printf("%sError: number of columns in first matrix must equal number of rows in second matrix for multiplication.\n%s", URED, COLOR_RESET);
         exit(1);
     }
     matrix result = create_matrix(a.rows, b.cols);
@@ -315,7 +350,7 @@ matrix get_minor(matrix m, int row, int col)
 // Function to compute determinant (Gauss method)
 double determinant(matrix m) {
     if (m.rows != m.cols) {
-        printf("Ошибка: определитель определён только для квадратных матриц.\n");
+        printf("Error: determinant is defined only for square matrices.\n%s", URED, COLOR_RESET);
         exit(1);
     }
     matrix temp = create_matrix(m.rows, m.cols);
@@ -390,11 +425,11 @@ void gaussian_elimination(matrix *m)
 matrix inverse_matrix(matrix m)
 {
     if (m.rows != m.cols) {
-        printf("Error: inverse is only defined for square matrices.\n");
+        printf("%sError: inverse is only defined for square matrices.\n%s", URED, COLOR_RESET);
         exit(1);
     }
     if (determinant(m) == 0) {
-        printf("Error: matrix is singular and cannot be inverted.\n");
+        printf("%sError: matrix is singular and cannot be inverted.\n%s", URED, COLOR_RESET);
         exit(1);
     }
     matrix aug = create_matrix(m.rows, 2 * m.cols);
@@ -433,7 +468,7 @@ matrix inverse_matrix(matrix m)
 matrix solve_system(matrix A, matrix b)
 {
     if (A.rows != b.rows || b.cols != 1) {
-        printf("Error: invalid dimensions for system solving.\n");
+        printf("%sError: invalid dimensions for system solving.\n%s", URED, COLOR_RESET);
         exit(1);
     }
     matrix aug = create_matrix(A.rows, A.cols + 1);
@@ -486,7 +521,7 @@ int rank(matrix m)
 // FIXME optimize matrix_power (squaring?)
 matrix matrix_power(matrix m, int exponent) {
     if (m.rows != m.cols) {
-        printf("Error: matrix must be square for exponentiation.\n");
+        printf("%sError: matrix must be square for exponentiation.\n%s", URED, COLOR_RESET);
         exit(1);
     }
 
@@ -502,7 +537,7 @@ matrix matrix_power(matrix m, int exponent) {
         return result;
     } else {
         if (determinant(m) == 0) {
-            printf("Error: matrix is singular and cannot be raised to a negative power.\n");
+            printf("%sError: matrix is singular and cannot be raised to a negative power.\n%s", URED, COLOR_RESET);
             exit(1);
         }
 
@@ -521,11 +556,11 @@ matrix matrix_power(matrix m, int exponent) {
 // Cholesky decomposition
 matrix cholesky_decomposition(matrix m) {
     if (m.rows != m.cols) {
-        printf("Error: matrix must be square for Cholesky decomposition.\n");
+        printf("%sError: matrix must be square for Cholesky decomposition.\n%s", URED, COLOR_RESET);
         exit(1);
     }
     if (!is_symmetric(m)) {
-        printf("Error: matrix must be symmetric for Cholesky decomposition");
+        printf("%sError: matrix must be symmetric for Cholesky decomposition\n%s", URED, COLOR_RESET);
         exit(1);
     }
 
@@ -542,7 +577,7 @@ matrix cholesky_decomposition(matrix m) {
         double det = determinant(minor);
         free_matrix(&minor);
         if (det <= 0) {
-            printf("Error: matrix is not positive definite.\n");
+            printf("%sError: matrix is not positive definite.\n%s", URED, COLOR_RESET);
             exit(1);
         }
     }
@@ -560,7 +595,7 @@ matrix cholesky_decomposition(matrix m) {
         }
         double temp = m.data[k][k] - sum1;
         if (temp <= 0) {
-            printf("Error: matrix is not positive definite.\n");
+            printf("%sError: matrix is not positive definite.\n%s", URED, COLOR_RESET);
             free_matrix(&L);
             exit(1);
         }
@@ -580,7 +615,7 @@ matrix cholesky_decomposition(matrix m) {
 // FIXME QR-algorithm?
 void power_method(matrix m, double *eigenvalue, matrix *eigenvector, int max_iter, double tol) {
     if (m.rows != m.cols) {
-        printf("Error: matrix must be square for power method");
+        printf("%sError: matrix must be square for power method.\n%s", URED, COLOR_RESET);
         exit(1);
     }
 
@@ -623,7 +658,7 @@ void power_method(matrix m, double *eigenvalue, matrix *eigenvector, int max_ite
         }
         prev_lambda = lambda;
     }
-    printf("Warning: power method did not converge.\n");
+    printf("%sWarning: power method did not converge.\n%s", UYEL, COLOR_RESET);
     *eigenvalue = prev_lambda;
     *eigenvector = v;
 }
@@ -631,7 +666,7 @@ void power_method(matrix m, double *eigenvalue, matrix *eigenvector, int max_ite
 // LU decomposition
 void lu_decomposition(matrix m, matrix *L, matrix *U) {
     if (m.rows != m.cols) {
-        printf("Error: matrix must be square for LU decomposition.\n");
+        printf("%sError: matrix must be square for LU decomposition.\n%s", URED, COLOR_RESET);
         exit(1);
     }
 
@@ -651,7 +686,7 @@ void lu_decomposition(matrix m, matrix *L, matrix *U) {
     for (int k = 0; k < n - 1; k++) {
         for (int i = k + 1; i < n; i++) {
             if ((*U).data[k][k] == 0) {
-                printf("Error: matrix is singular.\n");
+                printf("%sError: matrix is singular.\n%s", URED, COLOR_RESET);
                 exit(1);
             }
             double factor = (*U).data[i][k] / (*U).data[k][k];
