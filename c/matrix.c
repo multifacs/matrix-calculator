@@ -1,74 +1,83 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <math.h>
-#include <time.h>
-#include "matrix.h"
+/* 
+ * This file contains functions for matrix operations, including creation, input, output,
+ * basic operations, decompositions, and property checks.
+ */
 
-#define TOLERANCE       1e-10
+#include <stdio.h>      // For input and output functions
+#include <stdlib.h>     // For dynamic memory allocation
+#include <string.h>     // For string operations
+#include <math.h>       // For mathematical functions like sqrt, fabs
+#include <time.h>       // For random number generation
+#include "matrix.h"     // Custom header for matrix structure and function declarations
 
-#define URED            "\e[4;31m"      // Errors
-#define UGRN            "\e[4;32m"      // Results
-#define UYEL            "\e[4;33m"      // Information/warnings
-#define UBLU            "\e[4;34m"      // Inputs
-#define UCYN            "\e[4;36m"      // Menus
-#define COLOR_RESET     "\e[0m"         // Color reeset
+// Constants for tolerance and color codes
+#define TOLERANCE       1e-10           // Tolerance for floating-point comparisons
+
+#define URED            "\e[4;31m"      // Red underlined for errors
+#define UGRN            "\e[4;32m"      // Green underlined for results
+#define UYEL            "\e[4;33m"      // Yellow underlined for information/warnings
+#define UBLU            "\e[4;34m"      // Blue underlined for inputs
+#define UCYN            "\e[4;36m"      // Cyan underlined for menus
+#define COLOR_RESET     "\e[0m"         // Reset color formatting
 
 
-// Function for creating matrix
+/* 
+ * Creates a matrix with the specified number of rows and columns.
+ * Matrices can be of varying sizes with dynamic allocation
+ */
 matrix create_matrix(int rows, int cols) {
-    matrix m = {0, 0, NULL};
+    matrix m = {0, 0, NULL};    // Initialize matrix structure
     m.rows = rows;
     m.cols = cols;
-    m.data = (double**)malloc(rows * sizeof(double *));
+    m.data = (double**)malloc(rows * sizeof(double *));     // Allocate memory for row pointer      
     if (m.data == NULL) {
         fprintf(stderr, "%sError: Failed to allocate memory for matrix rows.\n%s", URED, COLOR_RESET);
-        return m;
+        return m;   // Return matrix with NULL data to indicate failure
     }
     for (int i = 0; i < rows; i++) {
-        m.data[i] = (double *)malloc(cols * sizeof(double));
+        m.data[i] = (double *)malloc(cols * sizeof(double));    //Allocate memory for each row
         if (m.data[i] == NULL) {
             fprintf(stderr, "%sError: Failed to allocate memory for matrix row %d.\n%s", URED, i, COLOR_RESET);
-            for (int k = 0; k < i; k++) free(m.data[k]);
+            for (int k = 0; k < i; k++) free(m.data[k]);        // Free previously allocated rows
             free(m.data);
             m.data = NULL;
-            return m;
+            return m;   // Return matrix with NULL data to indicate failure
         }
     }
-    return m;
+    return m;      // Return the created matrix
 }
-
-// Free matrix memory
+ 
+// Frees the memory allocated for the matrix to prevent memory leaks when matrices are no longer needed.
 void free_matrix(matrix *m) {
     for (int i = 0; i < m -> rows; i++) {
-        free(m -> data[i]);
+        free(m -> data[i]);     // Free each row
     }
-    free(m -> data);
+    free(m -> data);    // Free the array of row pointers
     m -> data = NULL;
     m -> rows = 0;
     m -> cols = 0;
 }
 
 
-// Function for input of matrix elements
+// Inputs matrix elements from the user to ensure each element is correctly entered and validated.
 void input_matrix(matrix *m) {
     printf("%sInput matrix elements (%d x %d):\n%s", UBLU, m->rows, m->cols, COLOR_RESET);
     for (int i = 0; i < m->rows; i++) {
         for (int j = 0; j < m->cols; j++) {
             printf("%sElement [%d][%d]: %s", UBLU, i, j, COLOR_RESET);
-            while (scanf("%lf", &m->data[i][j]) != 1) {
+            while (scanf("%lf", &m->data[i][j]) != 1) {     // Check if input is a number
                 int c;
-                while ((c = getchar()) != '\n' && c != EOF);
+                while ((c = getchar()) != '\n' && c != EOF);    // Clear input buffer
                 printf("%sInvalid input. Please enter a number.\n%s", URED, COLOR_RESET);
                 printf("%sElement [%d][%d]: %s", UBLU, i, j, COLOR_RESET);
             }
         }
     }
     int c;
-    while ((c = getchar()) != '\n' && c != EOF);
+    while ((c = getchar()) != '\n' && c != EOF);    // Clear any remaining input
 }
 
-// Function for matrix output
+// Prints the matrix in a formatted way to make the matrix easy to read, especially for larger matrices.
 void print_matrix(matrix m)
 {
     printf("%sMatrix [%d x %d]:\n%s", UYEL, m.rows, m.cols, COLOR_RESET);
@@ -78,18 +87,19 @@ void print_matrix(matrix m)
     for (int i = 0; i < m.rows; i++) {
         for (int j = 0; j < m.cols; j++) {
             double val = m.data[i][j];
-            if (fabs(fmod(val, 1.0)) < TOLERANCE) {
+            if (fabs(fmod(val, 1.0)) < TOLERANCE) {     // Check if value is effectively an integer
                 snprintf(buffer, sizeof(buffer), "%d", (int)val);
             } else {
-                snprintf(buffer, sizeof(buffer), "%.2f", val);
+                snprintf(buffer, sizeof(buffer), "%.2f", val);      // Use two decimal places
             }
             int len = strlen(buffer);
             if (len > max_width) {
-                max_width = len;
+                max_width = len;        //Find the maximum width for aligment
             }
         }
     }
 
+    // Print top border
     printf("+");
     for (int j = 0; j < m.cols; j++) {
         for (int k = 0; k < max_width + 2; k++) {
@@ -98,6 +108,7 @@ void print_matrix(matrix m)
     }
     printf("+\n");
 
+    // Print matrix rows
     for (int i = 0; i < m.rows; i++) {
         printf("|");
         for (int j = 0; j < m.cols; j++) {
@@ -111,6 +122,7 @@ void print_matrix(matrix m)
         printf("|\n");
     }
 
+    // Print bottom border
     printf("+");
     for (int j = 0; j < m.cols; j++) {
         for (int k = 0; k < max_width + 2; k++) {
@@ -120,7 +132,7 @@ void print_matrix(matrix m)
     printf("+\n");
 }
 
-//Function for generation of random matrix
+//Generates a random matrix with elements in the specified range (for testing and generating sample data)
 matrix generate_random_matrix(int rows, int cols, double min_val, double max_val) {
     matrix m = create_matrix(rows, cols);
     for (int i = 0; i < rows; i++) {
@@ -131,7 +143,7 @@ matrix generate_random_matrix(int rows, int cols, double min_val, double max_val
     return m;
 }
 
-// Helper function for check if matrices are equal
+// Checks if two matrices are equal within a tolerance
 int matrices_equal(matrix a, matrix b) {
     if (a.rows != b.rows || a.cols != b.cols) {
         return 0;
@@ -146,7 +158,7 @@ int matrices_equal(matrix a, matrix b) {
     return 1;
 }
 
-// Helper function for generating identity matrix
+// Creates an identity matrix of the specified size
 matrix create_identity_matrix(int size) {
     matrix identity = create_matrix(size, size);
     for (int i = 0; i < size; i++) {
@@ -157,7 +169,7 @@ matrix create_identity_matrix(int size) {
     return identity;
 }
 
-// Check for diagonality
+// Checks if the matrix is diagonal
 int is_diagonal (matrix m) {
     for (int i = 0; i < m.rows; i++) {
         for (int j = 0; j < m.cols; j++) {
@@ -169,7 +181,7 @@ int is_diagonal (matrix m) {
     return 1;
 }
 
-// Check for symmetry
+// Checks if the matrix is symmetric
 int is_symmetric(matrix m) {
     if (m.rows != m.cols) return 0;
     for (int i = 0; i < m.rows; i++) {
@@ -182,7 +194,7 @@ int is_symmetric(matrix m) {
     return 1;
 }
 
-// Check for orthogonality
+// Checks if the matrix is orthogonal
 int is_orthogonal(matrix m) {
     if (m.rows != m.cols) return 0;
     matrix transp = transpose_matrix(m);
@@ -197,7 +209,7 @@ int is_orthogonal(matrix m) {
     return equal;
 }
 
-// Upper-triangularity check
+// Checks if the matrix is upper triangular
 int is_upper_triangular(matrix m) {
     for (int i = 0; i < m.rows; i++) {
         for (int j = 0; j < i; j++) {
@@ -209,7 +221,7 @@ int is_upper_triangular(matrix m) {
     return 1;
 }
 
-// Lower-triangularity check
+// Checks if the matrix is lower triangular
 int is_lower_triangular(matrix m) {
     for (int i = 0; i < m.rows; i++) {
         for (int j = i + 1; j < m.cols; j++) {
@@ -221,7 +233,7 @@ int is_lower_triangular(matrix m) {
     return 1;
 }
 
-// Check for identity
+// Checks if the matrix is an identity matrix
 int is_identity(matrix m) {
     if (m.rows != m.cols) return 0;
     for (int i = 0; i < m.rows; i++) {
@@ -347,7 +359,11 @@ matrix get_minor(matrix m, int row, int col)
     return minor;
 }
 
-// Function to compute determinant (Gauss method)
+/* 
+ * Computes the determinant using Gaussian elimination.
+ * The matrix is transformed into upper triangular form by row operations, 
+ * and the determinant is the product of the diagonal elements, adjusted for row swaps.
+ */
 double determinant(matrix m) {
     if (m.rows != m.cols) {
         printf("Error: determinant is defined only for square matrices.\n%s", URED, COLOR_RESET);
@@ -356,7 +372,7 @@ double determinant(matrix m) {
     matrix temp = create_matrix(m.rows, m.cols);
     for (int i = 0; i < m.rows; i++) {
         for (int j = 0; j < m.cols; j++) {
-            temp.data[i][j] = m.data[i][j];
+            temp.data[i][j] = m.data[i][j];     // Copy matrix to avoid modifying the original
         }
     }
     double det = 1.0;
@@ -364,35 +380,38 @@ double determinant(matrix m) {
     for (int i = 0; i < temp.rows; i++) {
         int pivot_row = i;
         while (pivot_row < temp.rows && temp.data[pivot_row][i] == 0.0) {
-            pivot_row++;
+            pivot_row++;    // Find a non-zero pivot
         }
         if (pivot_row == temp.rows) {
             free_matrix(&temp);
-            return 0;
+            return 0;   // Matrix is singular if no pivot is found
         }
         if (pivot_row != i) {
             for (int j = 0; j < temp.cols; j++) {
                 double t = temp.data[i][j];
                 temp.data[i][j] = temp.data[pivot_row][j];
-                temp.data[pivot_row][j] = t;
+                temp.data[pivot_row][j] = t;    // Swap rows
             }
-            swaps++;
+            swaps++;    // Track swaps to adjust determinant sign
         }
         double pivot = temp.data[i][i];
-        det *= pivot;
+        det *= pivot;   //Multiply diagonal elements into determinant
         for (int k = i + 1; k < temp.rows; k++) {
-            if (pivot == 0.0) continue;
+            if (pivot == 0.0) continue;     // Skip if pivot is zero
             double factor = temp.data[k][i] / pivot;
             for (int j = i; j < temp.cols; j++) {
-                temp.data[k][j] -= factor * temp.data[i][j];
+                temp.data[k][j] -= factor * temp.data[i][j];    // Eliminate below pivot
             }
         }
     }
     free_matrix(&temp);
-    return (swaps % 2 == 0) ? det : -det;
+    return (swaps % 2 == 0) ? det : -det;   // Adjust sign based on number of swaps
 }
 
-// Helper function for Gaussian elimination
+/* 
+ * Performs Gaussian elimination on the matrix.
+ * Method for solving linear systems and computing rank or determinants.
+ */
 void gaussian_elimination(matrix *m)
 {
     int lead = 0;
@@ -409,19 +428,23 @@ void gaussian_elimination(matrix *m)
         }
         double *temp = m -> data[i];
         m -> data[i] = m -> data[r];
-        m -> data[r] = temp;
+        m -> data[r] = temp;    // Swap rows to bring non-zero pivot into position
         for (i = r + 1; i < m -> rows; i++) {
             if (m -> data[r][lead] == 0) continue;
             double factor = m -> data[i][lead] / m -> data[r][lead];
             for (int j = lead; j < m -> cols; j++) {
-                m -> data[i][j] -= factor * m -> data[r][j];
+                m -> data[i][j] -= factor * m -> data[r][j];    // Eliminate below pivot
             }
         }
         lead++;
     }
 }
 
-// Function to find inverse matrix using Gauss-Jordan method
+/* 
+ * Computes the inverse of the matrix using Gauss-Jordan elimination.
+ * Directly computes the inverse by transforming [A|I] to [I|A^-1], avoiding separate system solving.
+ * Augments the matrix with an identity matrix, then applies row operations to reduce the left side to identity.
+ */
 matrix inverse_matrix(matrix m)
 {
     if (m.rows != m.cols) {
@@ -436,20 +459,20 @@ matrix inverse_matrix(matrix m)
     for (int i = 0; i < m.rows; i++) {
         for (int j = 0; j < m.cols; j++) {
             aug.data[i][j] = m.data[i][j];
-            aug.data[i][j + m.cols] = (i == j) ? 1 : 0;
+            aug.data[i][j + m.cols] = (i == j) ? 1 : 0;     // Augment with identity matrix
         }
     }
     for (int i = 0; i < m.rows; i++) {
         double pivot = aug.data[i][i];
-        if (pivot == 0) continue;
+        if (pivot == 0) continue;   // Double check if determinant is non-zero
         for (int j = 0; j < 2 * m.cols; j++) {
-            aug.data[i][j] /= pivot;
+            aug.data[i][j] /= pivot;    // Normalize pivot row
         }
         for (int k = 0; k < m.rows; k++) {
             if (k != i) {
                 double factor = aug.data[k][i];
                 for (int j = 0; j < 2 * m.cols; j++) {
-                    aug.data[k][j] -= factor * aug.data[i][j];
+                    aug.data[k][j] -= factor * aug.data[i][j];  // Eliminate column
                 }
             }
         }
@@ -457,14 +480,14 @@ matrix inverse_matrix(matrix m)
     matrix inv = create_matrix(m.rows, m.cols);
     for (int i = 0; i < m.rows; i++) {
         for (int j = 0; j < m.cols; j++) {
-            inv.data[i][j] = aug.data[i][j + m.cols];
+            inv.data[i][j] = aug.data[i][j + m.cols];   // Extract inverse from right half
         }
     }
     free_matrix(&aug);
     return inv;
 }
 
-// Function to solve system of linear equations Ax = b
+// Solves system of linear equations Ax = b
 matrix solve_system(matrix A, matrix b)
 {
     if (A.rows != b.rows || b.cols != 1) {
@@ -476,7 +499,7 @@ matrix solve_system(matrix A, matrix b)
         for (int j = 0; j < A.cols; j++) {
             aug.data[i][j] = A.data[i][j];
         }
-        aug.data[i][A.cols] = b.data[i][0];
+        aug.data[i][A.cols] = b.data[i][0];     // Augment with b vector
     }
     gaussian_elimination(&aug);
     matrix x = create_matrix(A.cols, 1);
@@ -485,14 +508,17 @@ matrix solve_system(matrix A, matrix b)
         for (int j = i + 1; j < A.cols; j++) {
             sum += aug.data[i][j] * x.data[j][0];
         }
-        if (aug.data[i][i] == 0) continue;
-        x.data[i][0] = (aug.data[i][A.cols] - sum) / aug.data[i][i];
+        if (aug.data[i][i] == 0) continue;      // Skip if no solution (singular case)
+        x.data[i][0] = (aug.data[i][A.cols] - sum) / aug.data[i][i];    // Back substitution
     }
     free_matrix(&aug);
     return x;
 }
 
-// Function to find rank of a matrix
+/* 
+ * Computes the rank of the matrix.
+ * Reduces the matrix to row echelon form, where rank is the number of non-zero rows.
+ */
 int rank(matrix m)
 {
     matrix temp = create_matrix(m.rows, m.cols);
@@ -517,8 +543,10 @@ int rank(matrix m)
     return rank_count;
 }
 
-// Matrix exponetiation
-// FIXME optimize matrix_power (squaring?)
+/* 
+ * Raises the matrix to the specified power.
+ * TODO Optimize using exponentiation by squaring to reduce complexity.
+ */
 matrix matrix_power(matrix m, int exponent) {
     if (m.rows != m.cols) {
         printf("%sError: matrix must be square for exponentiation.\n%s", URED, COLOR_RESET);
@@ -526,13 +554,13 @@ matrix matrix_power(matrix m, int exponent) {
     }
 
     if (exponent == 0) {
-        return create_identity_matrix(m.rows);
+        return create_identity_matrix(m.rows);      // Any matrix to power 0 is the identity matrix
     } else if (exponent > 0) {
         matrix result = create_identity_matrix(m.rows);
         for (int i = 0; i < exponent; i++) {
             matrix temp = multiply_matrices(result, m);
             free_matrix(&result);
-            result = temp;
+            result = temp;      // Repeated multiplication for positive powers
         }
         return result;
     } else {
@@ -546,14 +574,19 @@ matrix matrix_power(matrix m, int exponent) {
         for (int i = 0; i < -exponent; i++) {
             matrix temp = multiply_matrices(result, m_inv);
             free_matrix(&result);
-            result = temp;
+            result = temp;      // Repeated multiplication with inverse for negative powers
         }
         free_matrix(&m_inv);
         return result;
     }
 }
 
-// Cholesky decomposition
+/* 
+ * Performs Cholesky decomposition on a symmetric positive definite matrix.
+ * Efficient for symmetric positive definite matrices, reducing A to L*L^T.
+ * Computes a lower triangular matrix L such that A = L*L^T, leveraging symmetry 
+ * and positive definiteness for stability and efficiency.
+ */
 matrix cholesky_decomposition(matrix m) {
     if (m.rows != m.cols) {
         printf("%sError: matrix must be square for Cholesky decomposition.\n%s", URED, COLOR_RESET);
@@ -566,6 +599,7 @@ matrix cholesky_decomposition(matrix m) {
 
     int n = m.rows;
 
+    // Check positive definiteness by ensuring all leading minors have positive determinants
     for (int k = 1; k <= n; k++) {
         matrix minor = create_matrix(k, k);
         for (int i = 0; i < k; i++) {
@@ -585,13 +619,13 @@ matrix cholesky_decomposition(matrix m) {
     matrix L = create_matrix(n, n);
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < n; j++) {
-            L.data[i][j] = 0.0;
+            L.data[i][j] = 0.0;     // Initialize L as lower triangular matrix
         }
     }
     for (int k = 0; k < n; k++) {
         double sum1 = 0.0;
         for (int m = 0; m < k; m++) {
-            sum1 += L.data[k][m] * L.data[k][m];
+            sum1 += L.data[k][m] * L.data[k][m];    // Compute diagonal element contribution
         }
         double temp = m.data[k][k] - sum1;
         if (temp <= 0) {
@@ -599,20 +633,23 @@ matrix cholesky_decomposition(matrix m) {
             free_matrix(&L);
             exit(1);
         }
-        L.data[k][k] = sqrt(temp);
+        L.data[k][k] = sqrt(temp);      // Diagonal element is sqrt of remaining value
         for (int i = k + 1; i < n; i++) {
             double sum2 = 0.0;
             for (int m = 0; m < k; m++) {
-                sum2 += L.data[i][m] * L.data[k][m];
+                sum2 += L.data[i][m] * L.data[k][m];    // Compute off-diagonal contribution
             }
-            L.data[i][k] = (m.data[i][k] - sum2) / L.data[k][k];
+            L.data[i][k] = (m.data[i][k] - sum2) / L.data[k][k];    // Compute L[i][k]
         }
     }
     return L;
 }
 
-// Power method for Eigenvalues and Eigenvectors
-// FIXME QR-algorithm?
+/* 
+ * Computes the dominant eigenvalue and eigenvector using the power method.
+ * Repeatedly multiplies a random vector by the matrix, normalizing each step, converging to the dominant eigenvector.
+ */
+// FIXME Implement QR-algorith
 void power_method(matrix m, double *eigenvalue, matrix *eigenvector, int max_iter, double tol) {
     if (m.rows != m.cols) {
         printf("%sError: matrix must be square for power method.\n%s", URED, COLOR_RESET);
@@ -622,7 +659,7 @@ void power_method(matrix m, double *eigenvalue, matrix *eigenvector, int max_ite
     int n = m.rows;
     matrix v = create_matrix(n, 1);
     for (int i = 0; i < n; i++) {
-        v.data[i][0] = (double)rand() /RAND_MAX;
+        v.data[i][0] = (double)rand() /RAND_MAX;    // Start with random vector
     }
 
     double norm = 0.0;
@@ -631,15 +668,15 @@ void power_method(matrix m, double *eigenvalue, matrix *eigenvector, int max_ite
     }
     norm = sqrt(norm);
     for (int i = 0; i < n; i++) {
-        v.data[i][0] /= norm;
+        v.data[i][0] /= norm;   // Normilize initial vector
     }
 
     double prev_lambda = 0.0;
     for (int iter = 0; iter < max_iter; iter++) {
-        matrix temp = multiply_matrices(m, v);
+        matrix temp = multiply_matrices(m, v);  // Apply matrix to current vector
         double lambda = 0.0;
         for (int i = 0; i < n; i++) {
-            lambda += v.data[i][0] * temp.data[i][0];
+            lambda += v.data[i][0] * temp.data[i][0];   // Compute Rayleigh quotient for eigenvalue
         }
         norm = 0.0;
         for (int i = 0; i < n; i++) {
@@ -647,11 +684,11 @@ void power_method(matrix m, double *eigenvalue, matrix *eigenvector, int max_ite
         }
         norm = sqrt(norm);
         for (int i = 0; i < n; i++) {
-            temp.data[i][0] /= norm;
+            temp.data[i][0] /= norm;    // Normilize resulting vector
         }
         free_matrix(&v);
         v = temp;
-        if (iter > 0 && fabs(lambda - prev_lambda) < tol) {
+        if (iter > 0 && fabs(lambda - prev_lambda) < tol) {     // Check convergence 
             *eigenvalue = lambda;
             *eigenvector = v;
             return;
@@ -660,10 +697,13 @@ void power_method(matrix m, double *eigenvalue, matrix *eigenvector, int max_ite
     }
     printf("%sWarning: power method did not converge.\n%s", UYEL, COLOR_RESET);
     *eigenvalue = prev_lambda;
-    *eigenvector = v;
+    *eigenvector = v;       // Return best approximation if not converged
 }
 
-// LU decomposition
+/* 
+ * Performs LU decomposition on the matrix.
+ * Factorizes A into L*U.
+ */
 void lu_decomposition(matrix m, matrix *L, matrix *U) {
     if (m.rows != m.cols) {
         printf("%sError: matrix must be square for LU decomposition.\n%s", URED, COLOR_RESET);
@@ -676,11 +716,11 @@ void lu_decomposition(matrix m, matrix *L, matrix *U) {
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < n; j++) {
             if (i == j) {
-                (*L).data[i][j] = 1.0;
+                (*L).data[i][j] = 1.0;      // L has 1s in diagonal
             } else {
                 (*L).data[i][j] = 0.0;
             }
-            (*U).data[i][j] = m.data[i][j];
+            (*U).data[i][j] = m.data[i][j];     // U starts as copy of m
         }
     }
     for (int k = 0; k < n - 1; k++) {
@@ -690,15 +730,18 @@ void lu_decomposition(matrix m, matrix *L, matrix *U) {
                 exit(1);
             }
             double factor = (*U).data[i][k] / (*U).data[k][k];
-            (*L).data[i][k] = factor;
+            (*L).data[i][k] = factor;       // Stores elimination factor for L
             for (int j = k; j < n; j++) {
-                (*U).data[i][j] -= factor * (*U).data[k][j];
+                (*U).data[i][j] -= factor * (*U).data[k][j];    // Update U
             }
         }
     }
 }
 
-// Frobenius norm
+/* 
+ * Computes the Frobenius norm of the matrix.
+ * Common measure of matrix magnitude, akin to Euclidean norm for vectors.
+ */
 double frobenius_norm(matrix m) {
     double sum = 0.0;
     for (int i = 0; i < m.rows; i++) {
@@ -709,7 +752,7 @@ double frobenius_norm(matrix m) {
     return sqrt(sum);
 }
 
-// 1-Norm
+// Computes the one-norm (maximum column sum) of the matrix.
 double one_norm(matrix m) {
     double max_sum = 0.0;
     for (int j = 0; j < m.cols; j++) {
@@ -724,7 +767,7 @@ double one_norm(matrix m) {
     return max_sum;
 }
 
-// Infinity norm
+// Computes the infinity norm (maximum row sum) of the matrix.
 double infinity_norm(matrix m) {
     double max_sum = 0.0;
     for (int i = 0; i < m.rows; i++) {

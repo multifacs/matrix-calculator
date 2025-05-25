@@ -1,8 +1,14 @@
-#include <stdio.h>
-#include <ctype.h>
-#include <string.h>
-#include <time.h>
-#include "matrix.h"
+/* 
+* Matrix Calculator is designed to perform matrix operations.
+* It supports basic actions and complex computations,
+* such as determinant, inverse matrix, decompositions and eigenvalues. 
+*/
+
+#include <stdio.h>      // Library for input and output
+#include <ctype.h>      // Functions for character operations
+#include <string.h>     // String operations
+#include <time.h>       // For random number generation
+#include "matrix.h"     // Custom header file for matrix functions
 
 // TODO matrix format
 // TODO errors log
@@ -12,6 +18,7 @@
 // TODO save and load matricies
 // FIXME better matrix input
 
+// Definition of color codes for terminal text output
 #define URED            "\e[4;31m"      // Errors
 #define UGRN            "\e[4;32m"      // Results
 #define UYEL            "\e[4;33m"      // Information/warnings
@@ -19,7 +26,10 @@
 #define UCYN            "\e[4;36m"      // Menus
 #define COLOR_RESET     "\e[0m"         // Color reeset
 
-
+/* 
+* Display the main menu with available operations.
+* Improves perception and makes more user-frendly interface. 
+*/
 void show_menu() {
     printf("%sMATRIX CALCULATOR\n%s", UCYN, COLOR_RESET);
     printf("%s1. Add two matrices\n%s", UYEL, COLOR_RESET);
@@ -41,6 +51,10 @@ void show_menu() {
     printf("%s17. Exit\n%s", UYEL, COLOR_RESET);
 }
 
+/* 
+* Gets the user's choice from menu.
+* Used infinite loop so ensures the programm doesn't terminate due to inccorect input.
+*/
 int get_user_choice() {
     char input[100];
     while (1) {
@@ -60,6 +74,7 @@ int get_user_choice() {
     }
 }
 
+// Requests a positive integer from the user.
 int input_positive_integer(const char* prompt) {
     char input[100];
     int value;
@@ -85,6 +100,11 @@ int input_positive_integer(const char* prompt) {
     }
 }
 
+/* 
+* Collects parametrs for generating a random matrix.
+* Min_val and max_val checked to avoid logical errors in generation. 
+*/
+
 void input_random_matrix_params(int *rows, int *cols, double *min_val, double *max_val) {
     *rows = input_positive_integer("Enter number of rows: ");
     *cols = input_positive_integer("Enter number of cols: ");
@@ -108,6 +128,10 @@ void input_random_matrix_params(int *rows, int *cols, double *min_val, double *m
     while (getchar() != '\n');
 }
 
+/* 
+ * Creates a new matrix by requesting dimensions and elements.
+ * Separated dimension and element inputs for simplification of code reuse.
+ */
 matrix input_matrix_new() {
     int rows = input_positive_integer("Enter number of rows: ");
     int cols = input_positive_integer("Enter number of columns: ");
@@ -116,10 +140,15 @@ matrix input_matrix_new() {
     return m;
 }
 
+/* 
+ * Displays the matrix on the screen using the print_matrix function.
+ * Enhances modularity and code readability.
+ */
 void display_matrix(matrix m) {
     print_matrix(m);
 }
 
+// Requests a scalar value from the user.
 int input_scalar() {
     double scalar;
     printf("%sInput scalar: %s", UBLU, COLOR_RESET);
@@ -127,13 +156,21 @@ int input_scalar() {
     return scalar;
 }
 
+/* 
+ * Waits for Enter to be pressed before continuing.
+ * User can review the results before the next operation.
+ */
 void wait_for_enter() {
     printf("%sPress Enter to continue...\n%s", UBLU, COLOR_RESET);
     while (getchar() != '\n');
 }
 
+/* 
+ * Main function - manages the program's logic.
+ * Provides clear separation of operations.
+ */
 int main() {
-    srand(time(NULL));
+    srand(time(NULL));      // * Initialize the random number generator for matrix creation
     int choice;
     do {
         show_menu();
