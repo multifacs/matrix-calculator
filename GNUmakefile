@@ -15,13 +15,19 @@ C_OUT := $(BUILD_DIR)/c/hello_c
 # Путь к выходному файлу на Rust
 RUST_OUT := $(BUILD_DIR)/rs/hello_rs
 
+# Путь к исходнику с тестами
+TEST_SRC := tests/matrix_c/test_matrix.c
+
+# Путь к выходному файлу с тестами
+TEST_OUT := $(BUILD_DIR)/test_matrix
+
 # Указываем компиляторы. Можно переопределить через командную строку:
 # make CC=clang RUSTC=rustc
 CC := gcc
 RUSTC := rustc
 
 # .PHONY означает, что цели не соответствуют настоящим файлам — они всегда будут выполняться, если указаны.
-.PHONY: all clean c rust
+.PHONY: all clean c rust test
 
 # Цель по умолчанию — собираем и C, и Rust
 all: c rust
@@ -40,7 +46,16 @@ $(C_OUT): $(C_SRC)
 	# Компилируем main.c → hello_c
 	# $< — первый файл зависимости (c/main.c)
 	# $@ — цель (build/c/hello_c)
-	$(CC) $< -o $@
+	$(CC) $< c/matrix.c -o $@ -lm -lcheck
+
+# Правило сборки файла с тестами
+$(TEST_OUT): $(TEST_SRC) c/matrix.c
+	@mkdir -p $(BUILD_DIR)
+	$(CC) -I c -o $@ $(TEST_SRC) c/matrix.c -lcheck -lm
+
+# Цель для сборки теста
+test: $(TEST_OUT)
+	./$(TEST_OUT)
 
 # ---- RUST BUILD ----
 
