@@ -20,7 +20,6 @@
 #define UCYN            "\e[4;36m"      // Cyan underlined for menus
 #define COLOR_RESET     "\e[0m"         // Reset color formatting
 
-
 /* 
  * Creates a matrix with the specified number of rows and columns.
  * Matrices can be of varying sizes with dynamic allocation
@@ -90,7 +89,7 @@ void print_matrix(matrix m)
         for (int j = 0; j < m.cols; j++) {
             double val = m.data[i][j];
             if (fabs(fmod(val, 1.0)) < TOLERANCE) {     // Check if value is effectively an integer
-                snprintf(buffer, sizeof(buffer), "%d", (int)val);
+                snprintf(buffer, sizeof(buffer), "%lld", (long long)val);
             } else {
                 snprintf(buffer, sizeof(buffer), "%.2f", val);      // Use two decimal places
             }
@@ -224,6 +223,11 @@ matrix create_identity_matrix(int size) {
         }
     }
     return identity;
+}
+
+// Helper function to check if a number is a power of two
+int is_power_of_two(int n) {
+    return (n > 0) && ((n & (n - 1)) == 0);
 }
 
 // Checks if the matrix is diagonal
@@ -364,6 +368,86 @@ matrix multiply_matrices(matrix a, matrix b)
         }
     }
     return result;
+}
+
+// Helper function to split a matrix into four submatrices for Strassen's algorithm
+void split_matrix(matrix m, matrix *a11, matrix *a12, matrix *a21, matrix *a22) {
+    int n = m.rows / 2;     // Size of submatrices
+
+    *a11 = create_matrix(n, n);
+    *a12 = create_matrix(n, n);
+    *a21 = create_matrix(n, n);
+    *a22 = create_matrix(n, n);
+
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            (*a11).data[i][j] = m.data[i][j];           // Top-left quadrant
+            (*a12).data[i][j] = m.data[i][j + n];       // Top-right quadrant
+            (*a21).data[i][j] = m.data[i + n][j];       // Bottom-left quadrant
+            (*a22).data[i][j] = m.data[i + n][j + n];   // Bottom-right quadrant
+        }
+    }
+}
+
+// Helper function to combine four submatrices into one matrix for Strassen's algorithm
+matrix combine_matrix(matrix c11, matrix c12, matrix c21, matrix c22) {
+    int n = c11.rows;       // Size of submatrices;
+    matrix c = create_matrix(2 * n, 2 * n);
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            c.data[i][j] = c11.data[i][j];                 // Top-left quadrant
+            c.data[i][j + n] = c12.data[i][j];             // Top-right quadrant
+            c.data[i + n][j] = c21.data[i][j];             // Bottom-left quadrant
+            c.data[i + n][j + n] = c22.data[i][j];         // Bottom-right quadrant
+        }
+    }
+    return c;
+}
+
+// Function for matrix multiplication using Strassen's algorithm
+matrix multiply_matrices_strassen(matrix a, matrix b) {
+
+    // Base case: if matrix 1x1, perform simple multiplication
+    if (a.rows == 1) {
+        matrix result = create_matrix (1, 1);
+        result.data[0][0] = a.data[0][0] * b.data[0][0];
+        return result;
+    }
+
+    int n = a.rows;
+    matrix a11, a12, a21, a22;
+    matrix b11, b12, b21, b22;
+
+    // Split matrices into 4 submatrices
+    split_matrix(a, &a11, &a12, &a21, &a22);
+    split_matrix(b, &b11, &b12, &b21, &b22);
+
+    // Compute the seven products recursively
+    matrix p1 = multiply_matrices_strassen(a11, subtract_matrices(b12, b22));
+    matrix p2 = multiply_matrices_strassen(add_matrices(a11, a12), b22);
+    matrix p3 = multiply_matrices_strassen(add_matrices(a21, a22), b11);
+    matrix p4 = multiply_matrices_strassen(a22, subtract_matrices(b21, b11));
+    matrix p5 = multiply_matrices_strassen(add_matrices(a11, a22), add_matrices(b11, b22));
+    matrix p6 = multiply_matrices_strassen(subtract_matrices(a12, a22), add_matrices(b21, b22));
+    matrix p7 = multiply_matrices_strassen(subtract_matrices(a11, a21), add_matrices(b11, b12));
+
+    // Compute the submatrices of the result
+    matrix c11 = add_matrices(subtract_matrices(add_matrices(p5, p4), p2), p6);
+    matrix c12 = add_matrices(p1, p2);
+    matrix c21 = add_matrices(p3, p4);
+    matrix c22 = subtract_matrices(add_matrices(p1, p5), add_matrices(p3, p7));
+
+    // Combine submatrices into the final result
+    matrix result = combine_matrix(c11, c12, c21, c22);
+
+    // Free temporary matrtices
+    free_matrix(&a11); free_matrix(&a12); free_matrix(&a21); free_matrix(&a22);
+    free_matrix(&b11); free_matrix(&b12); free_matrix(&b21); free_matrix(&b22);
+    free_matrix(&p1); free_matrix(&p2); free_matrix(&p3); free_matrix(&p4); free_matrix(&p5); free_matrix(&p6); free_matrix(&p7);
+    free_matrix(&c11); free_matrix(&c12); free_matrix(&c21); free_matrix(&c22);
+
+    return result;
+
 }
 
 // Function for multiplying a matrix by a scalar

@@ -403,8 +403,8 @@ void use_loaded_matrix(matrix loaded_matrix) {
 int main() {
     srand(time(NULL));      // Initialize the random number generator for matrix creation
     int choice;
-    matrix saved_matrix;    // Для хранения загруженной или сгенерированной матрицы
-    int matrix_loaded = 0;  // Флаг, указывающий, загружена ли матрица
+    matrix saved_matrix;    // Variable for keeping loaded or generated matrix
+    int matrix_loaded = 0;  // Flag for loaded matrix
 
     do {
         show_menu();
@@ -438,12 +438,28 @@ int main() {
                 printf("\n%sMultiply two matrices:\n%s", UGRN, COLOR_RESET);
                 matrix a = input_matrix_new();
                 matrix b = input_matrix_new();
-                matrix result = multiply_matrices(a, b);
-                display_matrix(result);
+
+                // Check if Strassen's algorithm if usable
+                int is_square = (a.rows == a.cols) && (b.rows == b.cols) && (a.rows == b.rows);
+                int is_power_of_two_size = is_power_of_two(a.rows);
+
+                if (is_square && is_power_of_two_size) {    // Use Strassen's if matrices are square and size of matrices are powers of 2
+                    matrix result = multiply_matrices_strassen(a, b);
+                    display_matrix(result);
+                    free_matrix(&result);
+                } else if (a.cols == b.rows) {      // Use standart multiplication algorithm
+                    matrix result = multiply_matrices(a, b);
+                    display_matrix(result);
+                    free_matrix(&result);
+                } else {        // Matrices are incompatable for multiplication
+                    printf("%sError: matrix sizes are incompatable for multiplication. \n%s", URED, COLOR_RESET);
+                }
+                
                 free_matrix(&a);
                 free_matrix(&b);
-                free_matrix(&result);
+
                 wait_for_enter();
+
                 break;
             }
             case 4: {

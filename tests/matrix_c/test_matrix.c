@@ -53,7 +53,7 @@ START_TEST(test_subtract_matrices) {
 }
 END_TEST
 
-// Multyplication test
+// Multiplication test (square matrices with the size of two (Strassen))
 START_TEST(test_multiply_matrices) {
 
     matrix a = create_matrix(2, 2);
@@ -67,6 +67,96 @@ START_TEST(test_multiply_matrices) {
     matrix expected = create_matrix(2, 2);
     expected.data[0][0] = 19; expected.data[0][1] = 22;
     expected.data[1][0] = 43; expected.data[1][1] = 50;
+
+    matrix result = multiply_matrices(a, b);
+    ck_assert_int_eq(matrices_equal(result, expected), 1);
+
+    free_matrix(&a);
+    free_matrix(&b);
+    free_matrix(&expected);
+    free_matrix(&result);
+}
+END_TEST
+
+// Multiplication test (non-square matrices (standard multiplication))
+START_TEST(test_multiply_matrices_non_square) {
+
+    matrix a = create_matrix(2, 3);
+    a.data[0][0] = 1; a.data[0][1] = 2; a.data[0][2] = 3;
+    a.data[1][0] = 4; a.data[1][1] = 5; a.data[1][2] = 6;
+
+    matrix b = create_matrix(3, 2);
+    b.data[0][0] = 7; b.data[0][1] = 8;
+    b.data[1][0] = 9; b.data[1][1] = 10;
+    b.data[2][0] = 11; b.data[2][1] = 12;
+
+    matrix expected = create_matrix(2, 2);
+    expected.data[0][0] = 58; expected.data[0][1] = 64;
+    expected.data[1][0] = 139; expected.data[1][1] = 154;
+
+    matrix result = multiply_matrices(a, b);
+    ck_assert_int_eq(matrices_equal(result, expected), 1);
+
+    free_matrix(&a);
+    free_matrix(&b);
+    free_matrix(&expected);
+    free_matrix(&result);
+}
+END_TEST
+
+// Multiplication test for square matrices with size not power of two (standard multiplication)
+START_TEST(test_multiply_matrices_square_not_power_of_two) {
+
+    matrix a = create_matrix(3, 3);
+    a.data[0][0] = 1; a.data[0][1] = 2; a.data[0][2] = 3;
+    a.data[1][0] = 4; a.data[1][1] = 5; a.data[1][2] = 6;
+    a.data[2][0] = 7; a.data[2][1] = 8; a.data[2][2] = 9;
+
+    matrix b = create_matrix(3, 3);
+    b.data[0][0] = 9; b.data[0][1] = 8; b.data[0][2] = 7;
+    b.data[1][0] = 6; b.data[1][1] = 5; b.data[1][2] = 4;
+    b.data[2][0] = 3; b.data[2][1] = 2; b.data[2][2] = 1;
+
+    matrix expected = create_matrix(3, 3);
+    expected.data[0][0] = 30; expected.data[0][1] = 24; expected.data[0][2] = 18;
+    expected.data[1][0] = 84; expected.data[1][1] = 69; expected.data[1][2] = 54;
+    expected.data[2][0] = 138; expected.data[2][1] = 114; expected.data[2][2] = 90;
+
+    matrix result = multiply_matrices(a, b);
+    ck_assert_int_eq(matrices_equal(result, expected), 1);
+
+    free_matrix(&a);
+    free_matrix(&b);
+    free_matrix(&expected);
+    free_matrix(&result);
+}
+END_TEST
+
+// Multiplication test for large square matrices with size power of two (Strassen)
+START_TEST(test_multiply_matrices_large) {
+    matrix a = create_matrix(4, 4);
+    for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 4; j++) {
+            a.data[i][j] = i * 4 + j + 1;
+        }
+    }
+
+    matrix b = create_matrix(4, 4);
+    for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 4; j++) {
+            b.data[i][j] = (i * 4 + j + 1) * 2;
+        }
+    }
+
+    matrix expected = create_matrix(4, 4);
+    for (int i = 0; i < 4; i++) {
+        for (int j = 0; j < 4; j++) {
+            expected.data[i][j] = 0;
+            for (int k = 0; k < 4; k++) {
+                expected.data[i][j] += a.data[i][k] * b.data[k][j];
+            }
+        }
+    }
 
     matrix result = multiply_matrices(a, b);
     ck_assert_int_eq(matrices_equal(result, expected), 1);
@@ -334,7 +424,6 @@ END_TEST
 
 // Create test suite
 Suite* matrix_suite(void) {
-    
     Suite *s;
     TCase *tc_core;
 
@@ -344,6 +433,9 @@ Suite* matrix_suite(void) {
     tcase_add_test(tc_core, test_add_matrices);
     tcase_add_test(tc_core, test_subtract_matrices);
     tcase_add_test(tc_core, test_multiply_matrices);
+    tcase_add_test(tc_core, test_multiply_matrices_non_square);
+    tcase_add_test(tc_core, test_multiply_matrices_square_not_power_of_two);
+    tcase_add_test(tc_core, test_multiply_matrices_large);
     tcase_add_test(tc_core, test_scalar_multiply);
     tcase_add_test(tc_core, test_transpose_matrix);
     tcase_add_test(tc_core, test_determinant);
@@ -361,15 +453,15 @@ Suite* matrix_suite(void) {
     return s;
 }
 
-// Main funtion for test startup
+// Main function for test startup
 int main(void) {
-    int number_failded;
+    int number_failed;
     Suite *s;
     SRunner *sr;
     s = matrix_suite();
     sr = srunner_create(s);
     srunner_run_all(sr, CK_NORMAL);
-    number_failded = srunner_ntests_failed(sr);
+    number_failed = srunner_ntests_failed(sr);
     srunner_free(sr);
-    return (number_failded == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
+    return (number_failed == 0) ? EXIT_SUCCESS : EXIT_FAILURE;
 }

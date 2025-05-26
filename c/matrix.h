@@ -4,7 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-// Definition of structure for matrix
+// Matrix structure definition
 typedef struct
 {
     int rows;
@@ -35,6 +35,15 @@ matrix subtract_matrices(matrix a, matrix b);
 
 // Function for matrix multiplication
 matrix multiply_matrices(matrix a, matrix b);
+
+// Function for matrix multiplication (using Strassen's algorithm)
+matrix multiply_matrices_strassen(matrix a, matrix b);
+
+// Helper function to check if a number is power of two
+int is_power_of_two(int n);
+
+// Helper function for combining matrices
+matrix combine_matrix(matrix c11, matrix c12, matrix c21, matrix c22);
 
 // Function for multiplying matrix by a scalar
 matrix scalar_multiply(matrix m, double scalar);
