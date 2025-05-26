@@ -132,6 +132,7 @@ matrix input_matrix_new() {
     int cols = input_positive_integer("Enter number of columns: ");
     matrix m = create_matrix(rows, cols);
     input_matrix(&m);
+    edit_matrix(&m);
     return m;
 }
 

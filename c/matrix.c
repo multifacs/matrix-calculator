@@ -61,23 +61,25 @@ void free_matrix(matrix *m) {
 
 // Inputs matrix elements from the user to ensure each element is correctly entered and validated.
 void input_matrix(matrix *m) {
-    printf("\n%sInput matrix elements (%d x %d):\n%s", UBLU, m->rows, m->cols, COLOR_RESET);
-    for (int i = 0; i < m->rows; i++) {
-        for (int j = 0; j < m->cols; j++) {
-            printf("%sElement [%d][%d]:%s ", UBLU, i, j, COLOR_RESET);
-            while (scanf("%lf", &m->data[i][j]) != 1) {     // Check if input is a number
-                int c;
-                while ((c = getchar()) != '\n' && c != EOF);    // Clear input buffer
-                printf("%sInvalid input. Please enter a number.\n%s", URED, COLOR_RESET);
+    printf("\n%sInput matrix elements (%d x %d):\n%s", UBLU, m -> rows, m -> cols, COLOR_RESET);
+    for (int i = 0; i < m -> rows; i++) {
+        for (int j = 0; j < m -> cols; j++) {
+            int valid_input = 0;
+            while (!valid_input) {
                 printf("%sElement [%d][%d]: %s", UBLU, i, j, COLOR_RESET);
+                if (scanf("%lf", &m -> data[i][j]) == 1) {
+                    valid_input = 1;        // Input is valid if scanf successfully reads a double
+                } else {
+                    printf("%sInvalid input. Please enter a number.\n%s", URED, COLOR_RESET);
+                    while (getchar() != '\n');      // Clear input buffer
+                }
             }
         }
     }
-    int c;
-    while ((c = getchar()) != '\n' && c != EOF);    // Clear any remaining input
+    while (getchar() != '\n');      // Clear any remaining input
 }
 
-// Prints the matrix in a formatted way to make the matrix easy to read, especially for larger matrices.
+// Inputs matrix elements from the user with validation. Ensures only numeric values are accepted, prompting for re-entry on invalid input.
 void print_matrix(matrix m)
 {
     printf("\n%sMatrix [%d x %d]:\n%s", UYEL, m.rows, m.cols, COLOR_RESET);
@@ -130,6 +132,61 @@ void print_matrix(matrix m)
         }
     }
     printf("+\n");
+}
+
+/* 
+ * Allows interactive editing of matrix elements after initial input.
+ * Displays the matrix and prompts the user to edit elements by specifying coordinates.
+ */
+void edit_matrix(matrix *m) {
+    char input[10];     // Create buffer for input string
+    int valid_choice = 0;
+
+    do {
+        print_matrix(*m);   // Print current matrix
+        printf("Do you want to edit any element? (y/n): ");
+
+        // Read input
+        if (fgets(input, sizeof(input), stdin) == NULL) {
+            printf("%sError reading input.%s\n", URED, COLOR_RESET);
+            continue;
+        }
+
+        // Delete \n from input
+        input[strcspn(input, "\n")] = 0;
+
+        // Check for one char in input
+        if (strlen(input) == 1) {
+            char choice = input[0];
+            if (choice == 'y' || choice == 'Y') {
+                int row, col;
+                double new_value;
+
+                printf("Enter row (0 to %d): ", m -> rows - 1);
+                scanf("%d", &row);
+
+                printf("Enter column (0 to %d): ", m -> cols - 1);
+                scanf("%d", &col);
+
+                if (row >= 0 && row < m -> rows && col >= 0 && col < m -> cols) {
+                    printf("Enter new value for element [%d][%d]: ", row, col);
+                    scanf("%lf", &new_value);
+                    m -> data[row][col] = new_value;        // Update element of matrix
+                } else {
+                    printf("%sInvalid row or column index.%s\n", URED, COLOR_RESET);
+                }
+
+                // Clear buffer after scanf
+                while (getchar() != '\n');
+            } else if (choice == 'n' || choice == 'N') {
+                valid_choice = 1;   // Exit the loop
+            } else {
+                printf("%sInvalid choice. Please enter 'y' or 'n'.%s\n", URED, COLOR_RESET);
+            }
+        } else {
+            printf("%sInvalid input. Please enter a single character ('y' ofr 'n').%s\n", URED, COLOR_RESET);
+        }
+    } while (!valid_choice);    // Repeat until input is valid
 }
 
 //Generates a random matrix with elements in the specified range (for testing and generating sample data)

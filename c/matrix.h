@@ -21,6 +21,9 @@ void free_matrix(matrix *m);
 // Input elements of matrix
 void input_matrix(matrix *m);
 
+// Edit elements of matrix with validation
+void edit_matrix(matrix *m);
+
 // Print matrix
 void print_matrix(matrix m);
 
