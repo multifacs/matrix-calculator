@@ -10,28 +10,20 @@
 #include <time.h>       // For random number generation
 #include "matrix.h"     // Custom header file for matrix functions
 
-// TODO matrix format
-// TODO errors log
-// TODO change elements of defined matrix
-// TODO help
-// TODO Web interface (WebAssebly?)
-// TODO save and load matricies
-// FIXME better matrix input
-
 // Definition of color codes for terminal text output
 #define URED            "\e[4;31m"      // Errors
 #define UGRN            "\e[4;32m"      // Results
 #define UYEL            "\e[4;33m"      // Information/warnings
 #define UBLU            "\e[4;34m"      // Inputs
 #define UCYN            "\e[4;36m"      // Menus
-#define COLOR_RESET     "\e[0m"         // Color reeset
+#define COLOR_RESET     "\e[0m"         // Color reset
 
 /* 
 * Display the main menu with available operations.
-* Improves perception and makes more user-frendly interface. 
+* Improves perception and makes more user-friendly interface. 
 */
 void show_menu() {
-    printf("%sMATRIX CALCULATOR\n%s", UCYN, COLOR_RESET);
+    printf("\n%sMATRIX CALCULATOR\n\n%s", UCYN, COLOR_RESET);
     printf("%s1. Add two matrices\n%s", UYEL, COLOR_RESET);
     printf("%s2. Subtract two matrices\n%s", UYEL, COLOR_RESET);
     printf("%s3. Multiply two matrices\n%s", UYEL, COLOR_RESET);
@@ -48,12 +40,16 @@ void show_menu() {
     printf("%s14. Eigenvalues and Eigenvector\n%s", UYEL, COLOR_RESET);
     printf("%s15. LU decomposition\n%s", UYEL, COLOR_RESET);
     printf("%s16. Matrix norms\n%s", UYEL, COLOR_RESET);
-    printf("%s17. Exit\n%s", UYEL, COLOR_RESET);
+    printf("%s17. Save matrix to file\n%s", UYEL, COLOR_RESET);
+    printf("%s18. Load matrix from file\n%s", UYEL, COLOR_RESET);
+    printf("%s19. Use loaded matrix for operations\n%s", UYEL, COLOR_RESET);
+    printf("%s20. Save random matrix to file\n%s", UYEL, COLOR_RESET);
+    printf("%s21. Exit\n\n%s", UYEL, COLOR_RESET);
 }
 
 /* 
 * Gets the user's choice from menu.
-* Used infinite loop so ensures the programm doesn't terminate due to inccorect input.
+* Used infinite loop so ensures the program doesn't terminate due to incorrect input.
 */
 int get_user_choice() {
     char input[100];
@@ -66,10 +62,10 @@ int get_user_choice() {
         input[strcspn(input, "\n")] = 0;
         char *endptr;
         long choice = strtol(input, &endptr, 10);
-        if (*endptr == '\0' && choice >= 1 && choice <= 17) {
+        if (*endptr == '\0' && choice >= 1 && choice <= 21) {
             return (int)choice;
         } else {
-            printf("%sInvalid input. Please enter a number between 1 and 17.\n%s", URED, COLOR_RESET);
+            printf("%sInvalid input. Please enter a number between 1 and 21.\n%s", URED, COLOR_RESET);
         }
     }
 }
@@ -101,12 +97,11 @@ int input_positive_integer(const char* prompt) {
 }
 
 /* 
-* Collects parametrs for generating a random matrix.
+* Collects parameters for generating a random matrix.
 * Min_val and max_val checked to avoid logical errors in generation. 
 */
-
 void input_random_matrix_params(int *rows, int *cols, double *min_val, double *max_val) {
-    *rows = input_positive_integer("Enter number of rows: ");
+    *rows = input_positive_integer("\nEnter number of rows: ");
     *cols = input_positive_integer("Enter number of cols: ");
     printf("%sEnter minimum value for elements: %s", UBLU, COLOR_RESET);
     while (scanf("%lf", min_val) != 1) {
@@ -133,7 +128,7 @@ void input_random_matrix_params(int *rows, int *cols, double *min_val, double *m
  * Separated dimension and element inputs for simplification of code reuse.
  */
 matrix input_matrix_new() {
-    int rows = input_positive_integer("Enter number of rows: ");
+    int rows = input_positive_integer("\nEnter number of rows: ");
     int cols = input_positive_integer("Enter number of columns: ");
     matrix m = create_matrix(rows, cols);
     input_matrix(&m);
@@ -149,7 +144,7 @@ void display_matrix(matrix m) {
 }
 
 // Requests a scalar value from the user.
-int input_scalar() {
+double input_scalar() {
     double scalar;
     printf("%sInput scalar: %s", UBLU, COLOR_RESET);
     scanf("%lf", &scalar);
@@ -165,219 +160,394 @@ void wait_for_enter() {
     while (getchar() != '\n');
 }
 
+// Save matrix into txt file
+void save_matrix_to_file(matrix m, const char* filename) {
+    FILE* file = fopen(filename, "w");
+    if (file == NULL) {
+        printf("%sError: unable to open file for save.\n%s", URED, COLOR_RESET);
+        return;
+    }
+    fprintf(file, "%d %d\n", m.rows, m.cols);
+    for (int i = 0; i < m.rows; i++) {
+        for (int j = 0; j < m.cols; j++) {
+            fprintf(file, "%lf ", m.data[i][j]);
+        }
+        fprintf(file, "\n");
+    }
+    fclose(file);
+    printf("%sMatrix saved in %s.\n%s", UGRN, filename, COLOR_RESET);
+}
+
+// Load matrix from txt file
+matrix load_matrix_from_file(const char* filename) {
+    FILE* file = fopen(filename, "r");
+    if (file == NULL) {
+        printf("%sError: cannot open file for reading.\n%s", URED, COLOR_RESET);
+        return create_matrix(0, 0);
+    }
+
+    int rows, cols;
+    if (fscanf(file, "%d %d", &rows, &cols) != 2) {
+        printf("%sError: incorrect file format.\n%s", URED, COLOR_RESET);
+        fclose(file);
+        return create_matrix(0, 0);
+    }
+    if (rows <= 0 || cols <= 0) {
+        printf("%sError: matrix size must be positive.\n%s", URED, COLOR_RESET);
+        fclose(file);
+        return create_matrix(0, 0);
+    }
+    matrix m = create_matrix(rows, cols);
+    if (m.data == NULL) {
+        fclose(file);
+        return create_matrix(0, 0);
+    }
+    for (int i = 0; i < rows; i++) {
+        for (int j = 0; j < cols; j++) {
+            if (fscanf(file, "%lf", &m.data[i][j]) != 1 ) {
+                printf("%sError: incorrect data format.\n%s", URED, COLOR_RESET);
+                free_matrix(&m);
+                fclose(file);
+                return create_matrix(0, 0);
+            }
+        }
+    }
+    fclose(file);
+    printf("%sMatrix loaded from %s.\n%s", UGRN, filename, COLOR_RESET);
+    return m;
+}
+
+/* 
+ * Function to select and perform operations with the loaded matrix
+ */
+void use_loaded_matrix(matrix loaded_matrix) {
+    int op_choice;
+    printf("\n%sSelect operation for loaded matrix:\n%s", UCYN, COLOR_RESET);
+    printf("%s1. Add to another matrix\n%s", UYEL, COLOR_RESET);
+    printf("%s2. Subtract from another matrix\n%s", UYEL, COLOR_RESET);
+    printf("%s3. Multiply by another matrix\n%s", UYEL, COLOR_RESET);
+    printf("%s4. Multiply by scalar\n%s", UYEL, COLOR_RESET);
+    printf("%s5. Transpose\n%s", UYEL, COLOR_RESET);
+    printf("%s6. Find determinant\n%s", UYEL, COLOR_RESET);
+    printf("%s7. Find inverse matrix\n%s", UYEL, COLOR_RESET);
+    printf("%s8. Find rank\n%s", UYEL, COLOR_RESET);
+    printf("%s9. Check matrix properties\n%s", UYEL, COLOR_RESET);
+    printf("%s10. Matrix exponentiation\n%s", UYEL, COLOR_RESET);
+    printf("%s11. Cholesky decomposition\n%s", UYEL, COLOR_RESET);
+    printf("%s12. Eigenvalues and Eigenvector\n%s", UYEL, COLOR_RESET);
+    printf("%s13. LU decomposition\n%s", UYEL, COLOR_RESET);
+    printf("%s14. Matrix norms\n%s", UYEL, COLOR_RESET);
+    printf("%sEnter your choice: %s", UBLU, COLOR_RESET);
+    scanf("%d", &op_choice);
+    getchar(); // Consume newline
+
+    switch (op_choice) {
+        case 1: { // Add to another matrix
+            matrix b = input_matrix_new();
+            if (loaded_matrix.rows != b.rows || loaded_matrix.cols != b.cols) {
+                printf("%sError: Matrices must have the same dimensions for addition.\n%s", URED, COLOR_RESET);
+            } else {
+                matrix result = add_matrices(loaded_matrix, b);
+                display_matrix(result);
+                free_matrix(&result);
+            }
+            free_matrix(&b);
+            break;
+        }
+        case 2: { // Subtract from another matrix
+            matrix b = input_matrix_new();
+            if (loaded_matrix.rows != b.rows || loaded_matrix.cols != b.cols) {
+                printf("%sError: Matrices must have the same dimensions for subtraction.\n%s", URED, COLOR_RESET);
+            } else {
+                matrix result = subtract_matrices(loaded_matrix, b);
+                display_matrix(result);
+                free_matrix(&result);
+            }
+            free_matrix(&b);
+            break;
+        }
+        case 3: { // Multiply by another matrix
+            matrix b = input_matrix_new();
+            if (loaded_matrix.cols != b.rows) {
+                printf("%sError: Number of columns in first matrix must equal number of rows in second matrix.\n%s", URED, COLOR_RESET);
+            } else {
+                matrix result = multiply_matrices(loaded_matrix, b);
+                display_matrix(result);
+                free_matrix(&result);
+            }
+            free_matrix(&b);
+            break;
+        }
+        case 4: { // Multiply by scalar
+            double scalar = input_scalar();
+            matrix result = scalar_multiply(loaded_matrix, scalar);
+            display_matrix(result);
+            free_matrix(&result);
+            break;
+        }
+        case 5: { // Transpose
+            matrix result = transpose_matrix(loaded_matrix);
+            display_matrix(result);
+            free_matrix(&result);
+            break;
+        }
+        case 6: { // Find determinant
+            if (loaded_matrix.rows != loaded_matrix.cols) {
+                printf("%sError: Determinant is only defined for square matrices.\n%s", URED, COLOR_RESET);
+            } else {
+                double det = determinant(loaded_matrix);
+                printf("\n%sDeterminant: %lf\n%s", UGRN, det, COLOR_RESET);
+            }
+            break;
+        }
+        case 7: { // Find inverse matrix
+            if (loaded_matrix.rows != loaded_matrix.cols) {
+                printf("%sError: Inverse is only defined for square matrices.\n%s", URED, COLOR_RESET);
+            } else {
+                matrix result = inverse_matrix(loaded_matrix);
+                display_matrix(result);
+                free_matrix(&result);
+            }
+            break;
+        }
+        case 8: { // Find rank
+            int r = rank(loaded_matrix);
+            printf("\n%sRank: %d\n%s", UGRN, r, COLOR_RESET);
+            break;
+        }
+        case 9: { // Check matrix properties
+            printf("\n%sMatrix properties:\n%s", UGRN, COLOR_RESET);
+            printf("%sDiagonal: %s\n%s", UGRN, is_diagonal(loaded_matrix) ? "Yes" : "No", COLOR_RESET);
+            printf("%sSymmetric: %s\n%s", UGRN, is_symmetric(loaded_matrix) ? "Yes" : "No", COLOR_RESET);
+            printf("%sUpper triangular: %s\n%s", UGRN, is_upper_triangular(loaded_matrix) ? "Yes" : "No", COLOR_RESET);
+            printf("%sLower triangular: %s\n%s", UGRN, is_lower_triangular(loaded_matrix) ? "Yes" : "No", COLOR_RESET);
+            printf("%sIdentity: %s\n%s", UGRN, is_identity(loaded_matrix) ? "Yes" : "No", COLOR_RESET);
+            break;
+        }
+        case 10: { // Matrix exponentiation
+            if (loaded_matrix.rows != loaded_matrix.cols) {
+                printf("%sError: Matrix must be square for exponentiation.\n%s", URED, COLOR_RESET);
+            } else {
+                int exponent;
+                printf("%sEnter exponent: %s", UBLU, COLOR_RESET);
+                scanf("%d", &exponent);
+                matrix result = matrix_power(loaded_matrix, exponent);
+                display_matrix(result);
+                free_matrix(&result);
+            }
+            break;
+        }
+        case 11: { // Cholesky decomposition
+            if (loaded_matrix.rows != loaded_matrix.cols) {
+                printf("%sError: Matrix must be square for Cholesky decomposition.\n%s", URED, COLOR_RESET);
+            } else if (!is_symmetric(loaded_matrix)) {
+                printf("%sError: Matrix must be symmetric.\n%s", URED, COLOR_RESET);
+            } else {
+                matrix L = cholesky_decomposition(loaded_matrix);
+                printf("%sLower triangular matrix L:\n%s", UGRN, COLOR_RESET);
+                display_matrix(L);
+                free_matrix(&L);
+            }
+            break;
+        }
+        case 12: { // Eigenvalues and Eigenvector
+            if (loaded_matrix.rows != loaded_matrix.cols) {
+                printf("%sError: Matrix must be square.\n%s", URED, COLOR_RESET);
+            } else {
+                double eigenvalue;
+                matrix eigenvector;
+                int max_iter = 1000;
+                double tol = 1e-6;
+                power_method(loaded_matrix, &eigenvalue, &eigenvector, max_iter, tol);
+                printf("\n%sEigenvalue: %f\n%s", UGRN, eigenvalue, COLOR_RESET);
+                printf("%sEigenvector:\n%s", UGRN, COLOR_RESET);
+                display_matrix(eigenvector);
+                free_matrix(&eigenvector);
+            }
+            break;
+        }
+        case 13: { // LU decomposition
+            if (loaded_matrix.rows != loaded_matrix.cols) {
+                printf("%sError: Matrix must be square.\n%s", URED, COLOR_RESET);
+            } else {
+                matrix L, U;
+                lu_decomposition(loaded_matrix, &L, &U);
+                printf("%sLower triangular matrix L:\n%s", UGRN, COLOR_RESET);
+                display_matrix(L);
+                printf("%sUpper triangular matrix U:\n%s", UGRN, COLOR_RESET);
+                display_matrix(U);
+                free_matrix(&L);
+                free_matrix(&U);
+            }
+            break;
+        }
+        case 14: { // Matrix norms
+            double f_norm = frobenius_norm(loaded_matrix);
+            double one_n = one_norm(loaded_matrix);
+            double inf_n = infinity_norm(loaded_matrix);
+            printf("\n%sFrobenius norm: %f\n%s", UGRN, f_norm, COLOR_RESET);
+            printf("%sOne-norm: %f\n%s", UGRN, one_n, COLOR_RESET);
+            printf("%sInfinity norm: %f\n%s", UGRN, inf_n, COLOR_RESET);
+            break;
+        }
+        default:
+            printf("%sInvalid operation choice.\n%s", URED, COLOR_RESET);
+    }
+}
+
 /* 
  * Main function - manages the program's logic.
  * Provides clear separation of operations.
  */
 int main() {
-    srand(time(NULL));      // * Initialize the random number generator for matrix creation
+    srand(time(NULL));      // Initialize the random number generator for matrix creation
     int choice;
+    matrix saved_matrix;    // Для хранения загруженной или сгенерированной матрицы
+    int matrix_loaded = 0;  // Флаг, указывающий, загружена ли матрица
+
     do {
         show_menu();
         choice = get_user_choice();
         switch(choice) {
             case 1: {
-                printf("%sAdd two matrices:\n%s", UGRN, COLOR_RESET);
-
+                printf("\n%sAdd two matrices:\n%s", UGRN, COLOR_RESET);
                 matrix a = input_matrix_new();
                 matrix b = input_matrix_new();
-
                 matrix result = add_matrices(a, b);
-
                 display_matrix(result);
-
                 free_matrix(&a);
                 free_matrix(&b);
                 free_matrix(&result);
-
                 wait_for_enter();
                 break;
             }
-
             case 2: {
-                printf("%sSubtract two matrices:\n%s", UGRN, COLOR_RESET);
-
+                printf("\n%sSubtract two matrices:\n%s", UGRN, COLOR_RESET);
                 matrix a = input_matrix_new();
                 matrix b = input_matrix_new();
-
                 matrix result = subtract_matrices(a, b);
-
                 display_matrix(result);
-
                 free_matrix(&a);
                 free_matrix(&b);
                 free_matrix(&result);
-
                 wait_for_enter();
                 break;
             }
-
             case 3: {
-                printf("%sMultiply two matrices:\n%s", UGRN, COLOR_RESET);
-
+                printf("\n%sMultiply two matrices:\n%s", UGRN, COLOR_RESET);
                 matrix a = input_matrix_new();
                 matrix b = input_matrix_new();
-
                 matrix result = multiply_matrices(a, b);
-
                 display_matrix(result);
-
                 free_matrix(&a);
                 free_matrix(&b);
                 free_matrix(&result);
-
                 wait_for_enter();
                 break;
             }
-
             case 4: {
-                printf("%sMultiply matrix by a scalar:\n%s", UGRN, COLOR_RESET);
-
+                printf("\n%sMultiply matrix by a scalar:\n%s", UGRN, COLOR_RESET);
                 matrix m = input_matrix_new();
                 double scalar = input_scalar();
-
                 matrix result = scalar_multiply(m, scalar);
-
                 display_matrix(result);
-
                 free_matrix(&m);
                 free_matrix(&result);
-
                 wait_for_enter();
                 break;
             }
-            
             case 5: {
-                printf("%sMatrix transposition:\n%s", UGRN, COLOR_RESET);
-
+                printf("\n%sMatrix transposition:\n%s", UGRN, COLOR_RESET);
                 matrix m = input_matrix_new();
                 matrix result = transpose_matrix(m);
-
                 display_matrix(result);
-
                 free_matrix(&m);
                 free_matrix(&result);
-
                 wait_for_enter();
                 break;
             }
-
             case 6: {
-                printf("%sFind determinant:\n%s", UGRN, COLOR_RESET);
-
+                printf("\n%sFind determinant:\n%s", UGRN, COLOR_RESET);
                 matrix m = input_matrix_new();
                 if (m.rows != m.cols) {
                     printf("%sError: determinant is valid only for square matrices.\n%s", URED, COLOR_RESET);
-                } 
-                else {
+                } else {
                     double det = determinant(m);
-                    printf("%sDeterminant: %lf\n%s", UGRN, det, COLOR_RESET);
+                    printf("\n%sDeterminant: %lf\n%s", UGRN, det, COLOR_RESET);
                 }
-
                 free_matrix(&m);
-
                 wait_for_enter();
                 break;
             }
-            
             case 7: {
-                printf("%sFind inverse matrix:\n%s", UGRN, COLOR_RESET);
-
+                printf("\n%sFind inverse matrix:\n%s", UGRN, COLOR_RESET);
                 matrix m = input_matrix_new();
-
                 if (m.rows != m.cols) {
                     printf("%sError: inverse matrix is valid only for square matrices.\n%s", URED, COLOR_RESET);
-                } 
-                else {
+                } else {
                     matrix result = inverse_matrix(m);
                     display_matrix(result);
                     free_matrix(&result);
                 }
-
                 free_matrix(&m);
-
                 wait_for_enter();
                 break;
             }
-
             case 8: {
-                printf("%sSolve SLE (Ax = B):\n%s", UGRN, COLOR_RESET);
-
+                printf("\n%sSolve SLE (Ax = B):\n%s", UGRN, COLOR_RESET);
                 printf("%sInput matrix A:\n%s", UBLU, COLOR_RESET);
                 matrix A = input_matrix_new();
-
                 printf("%sInput vector B:\n%s", UBLU, COLOR_RESET);
                 matrix B = input_matrix_new();
-
                 if (A.rows != B.rows || B.cols != 1) {
                     printf("%sError: B must be a column vector with %d rows.\n%s", URED, A.rows, COLOR_RESET);
-                }
-                else {
+                } else {
                     matrix x = solve_system(A, B);
                     display_matrix(x);
                     free_matrix(&x);
                 }
-
-
                 free_matrix(&A);
                 free_matrix(&B);
-
                 wait_for_enter();
                 break;
             }
-
             case 9: {
-                printf("%sFind rank of a matrix:\n%s", UGRN, COLOR_RESET);
-
+                printf("\n%sFind rank of a matrix:\n%s", UGRN, COLOR_RESET);
                 matrix m = input_matrix_new();
                 int r = rank(m);
-
-                printf("%sRank: %d\n%s", UGRN, r, COLOR_RESET);
-
+                printf("\n%sRank: %d\n%s", UGRN, r, COLOR_RESET);
                 free_matrix(&m);
-
                 wait_for_enter();
                 break;
             }
-
             case 10: {
-                printf("%sGenerate random matrix:\n%s", UGRN, COLOR_RESET);
-
+                printf("\n%sGenerate random matrix:\n%s", UGRN, COLOR_RESET);
                 int rows, cols;
                 double min_val, max_val;
-
                 input_random_matrix_params(&rows, &cols, &min_val, &max_val);
-                matrix random_matrix = generate_random_matrix(rows, cols, min_val, max_val);
-
-                printf("%sGenerate random matrix:\n%s", UGRN, COLOR_RESET);
-
-                print_matrix(random_matrix);
-
-                free_matrix(&random_matrix);
-
+                if (matrix_loaded) free_matrix(&saved_matrix);
+                saved_matrix = generate_random_matrix(rows, cols, min_val, max_val);
+                matrix_loaded = 1;
+                printf("%sGenerated random matrix:\n%s", UGRN, COLOR_RESET);
+                display_matrix(saved_matrix);
                 wait_for_enter();
                 break;
             }
-
             case 11: {
-                printf("%sCheck matrix properites:\n%s", UGRN, COLOR_RESET);
+                printf("\n%sCheck matrix properties:\n%s", UGRN, COLOR_RESET);
                 matrix m = input_matrix_new();
-                
-                printf("%sMatrix properties:\n%s", UGRN, COLOR_RESET);
+                printf("\n%sMatrix properties:\n%s", UGRN, COLOR_RESET);
                 printf("%sDiagonal: %s\n%s", UGRN, is_diagonal(m) ? "Yes" : "No", COLOR_RESET);
                 printf("%sSymmetric: %s\n%s", UGRN, is_symmetric(m) ? "Yes" : "No", COLOR_RESET);
                 printf("%sUpper triangular: %s\n%s", UGRN, is_upper_triangular(m) ? "Yes" : "No", COLOR_RESET);
                 printf("%sLower triangular: %s\n%s", UGRN, is_lower_triangular(m) ? "Yes" : "No", COLOR_RESET);
                 printf("%sIdentity: %s\n%s", UGRN, is_identity(m) ? "Yes" : "No", COLOR_RESET);
-
                 free_matrix(&m);
-                
                 wait_for_enter();
                 break;
             }
-
             case 12: {
-                printf("%sMatrix exponentiation:\n%s", UGRN, COLOR_RESET);
+                printf("\n%sMatrix exponentiation:\n%s", UGRN, COLOR_RESET);
                 matrix m = input_matrix_new();
                 if (m.rows != m.cols) {
                     printf("%sError: matrix must be square.\n%s", URED, COLOR_RESET);
@@ -389,17 +559,15 @@ int main() {
                     display_matrix(result);
                     free_matrix(&result);
                 }
-
                 free_matrix(&m);
                 wait_for_enter();
                 break;
             }
-
             case 13: {
-                printf("%sCholesky decomposition:\n%s", UGRN, COLOR_RESET);
+                printf("\n%sCholesky decomposition:\n%s", UGRN, COLOR_RESET);
                 matrix m = input_matrix_new();
                 if (m.rows != m.cols) {
-                    printf("%sError: matris must be square.\n%s", URED, COLOR_RESET);
+                    printf("%sError: matrix must be square.\n%s", URED, COLOR_RESET);
                 } else if (!is_symmetric(m)) {
                     printf("%sError: matrix must be symmetric.\n%s", URED, COLOR_RESET);
                 } else {
@@ -408,14 +576,12 @@ int main() {
                     display_matrix(L);
                     free_matrix(&L);
                 }
-                
                 free_matrix(&m);
                 wait_for_enter();
                 break;
             }
-
             case 14: {
-                printf("%sEigenvalues and Eigenvectors:\n%s", UGRN, COLOR_RESET);
+                printf("\n%sEigenvalues and Eigenvectors:\n%s", UGRN, COLOR_RESET);
                 matrix m = input_matrix_new();
                 if (m.rows != m.cols) {
                     printf("%sError: matrix must be square.\n%s", URED, COLOR_RESET);
@@ -425,19 +591,17 @@ int main() {
                     int max_iter = 1000;
                     double tol = 1e-6;
                     power_method(m, &eigenvalue, &eigenvector, max_iter, tol);
-                    printf("%sEigenvalue: %f\n%s", UGRN, eigenvalue, COLOR_RESET);
+                    printf("\n%sEigenvalue: %f\n%s", UGRN, eigenvalue, COLOR_RESET);
                     printf("%sEigenvector:\n%s", UGRN, COLOR_RESET);
                     display_matrix(eigenvector);
                     free_matrix(&eigenvector);
                 }
-
                 free_matrix(&m);
                 wait_for_enter();
                 break;
             }
-
             case 15: {
-                printf("%sLU decomposition:\n%s", UGRN, COLOR_RESET);
+                printf("\n%sLU decomposition:\n%s", UGRN, COLOR_RESET);
                 matrix m = input_matrix_new();
                 if (m.rows != m.cols) {
                     printf("%sError: matrix must be square\n%s", URED, COLOR_RESET);
@@ -451,33 +615,80 @@ int main() {
                     free_matrix(&L);
                     free_matrix(&U);
                 }
-
                 free_matrix(&m);
                 wait_for_enter();
                 break;
             }
-
             case 16: {
-                printf("%sMatrix norms:\n%s", UGRN, COLOR_RESET);
+                printf("\n%sMatrix norms:\n%s", UGRN, COLOR_RESET);
                 matrix m = input_matrix_new();
                 double f_norm = frobenius_norm(m);
                 double one_n = one_norm(m);
                 double inf_n = infinity_norm(m);
-                printf("%sFrobenius norm: %f\n%s", UGRN, f_norm, COLOR_RESET);
+                printf("\n%sFrobenius norm: %f\n%s", UGRN, f_norm, COLOR_RESET);
                 printf("%sOne-norm: %f\n%s", UGRN, one_n, COLOR_RESET);
                 printf("%sInfinity norm: %f\n%s", UGRN, inf_n, COLOR_RESET);
-
                 free_matrix(&m);
                 wait_for_enter();
                 break;
             }
-        
-            case 17: 
-                printf("Exit...\n");
+            case 17: {
+                printf("\n%sSave matrix in file:\n%s", UGRN, COLOR_RESET);
+                matrix m = input_matrix_new();
+                char filename[100];
+                printf("%sEnter file name: %s", UBLU, COLOR_RESET);
+                scanf("%s", filename);
+                save_matrix_to_file(m, filename);
+                free_matrix(&m);
+                wait_for_enter();
+                break;
+            }
+            case 18: {
+                printf("\n%sLoading matrix from file:\n%s", UGRN, COLOR_RESET);
+                char filename[100];
+                printf("%sEnter file name: %s", UBLU, COLOR_RESET);
+                scanf("%s", filename);
+                if (matrix_loaded) free_matrix(&saved_matrix);
+                saved_matrix = load_matrix_from_file(filename);
+                if (saved_matrix.data != NULL) {
+                    matrix_loaded = 1;
+                    display_matrix(saved_matrix);
+                }
+                wait_for_enter();
+                break;
+            }
+            case 19: {
+                if (!matrix_loaded) {
+                    printf("%sNo matrix loaded or generated. Please load or generate a matrix first.\n%s", URED, COLOR_RESET);
+                    wait_for_enter();
+                    break;
+                }
+                use_loaded_matrix(saved_matrix);
+                wait_for_enter();
+                break;
+            }
+            case 20: {
+                if (!matrix_loaded) {
+                    printf("%sNo random matrix generated. Please generate a matrix first.\n%s", URED, COLOR_RESET);
+                    wait_for_enter();
+                    break;
+                }
+                printf("\n%sSave random matrix to file:\n%s", UGRN, COLOR_RESET);
+                char filename[100];
+                printf("%sEnter file name: %s", UBLU, COLOR_RESET);
+                scanf("%s", filename);
+                save_matrix_to_file(saved_matrix, filename);
+                wait_for_enter();
+                break;
+            }
+            case 21:
+                printf("\nExit...\n");
                 break;
             default:
-                printf("%sWrong choice. Please enter a number between 1 and 17.\n%s", URED, COLOR_RESET);
+                printf("\n%sWrong choice. Please enter a number between 1 and 21.\n%s", URED, COLOR_RESET);
         }
-    } while (choice != 17);
+    } while (choice != 21);
+
+    if (matrix_loaded) free_matrix(&saved_matrix);
     return 0;
 }

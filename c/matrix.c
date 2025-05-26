@@ -61,10 +61,10 @@ void free_matrix(matrix *m) {
 
 // Inputs matrix elements from the user to ensure each element is correctly entered and validated.
 void input_matrix(matrix *m) {
-    printf("%sInput matrix elements (%d x %d):\n%s", UBLU, m->rows, m->cols, COLOR_RESET);
+    printf("\n%sInput matrix elements (%d x %d):\n%s", UBLU, m->rows, m->cols, COLOR_RESET);
     for (int i = 0; i < m->rows; i++) {
         for (int j = 0; j < m->cols; j++) {
-            printf("%sElement [%d][%d]: %s", UBLU, i, j, COLOR_RESET);
+            printf("%sElement [%d][%d]:%s ", UBLU, i, j, COLOR_RESET);
             while (scanf("%lf", &m->data[i][j]) != 1) {     // Check if input is a number
                 int c;
                 while ((c = getchar()) != '\n' && c != EOF);    // Clear input buffer
@@ -80,7 +80,7 @@ void input_matrix(matrix *m) {
 // Prints the matrix in a formatted way to make the matrix easy to read, especially for larger matrices.
 void print_matrix(matrix m)
 {
-    printf("%sMatrix [%d x %d]:\n%s", UYEL, m.rows, m.cols, COLOR_RESET);
+    printf("\n%sMatrix [%d x %d]:\n%s", UYEL, m.rows, m.cols, COLOR_RESET);
 
     int max_width = 0;
     char buffer[50];
