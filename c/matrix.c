@@ -786,59 +786,117 @@ matrix cholesky_decomposition(matrix m) {
     return L;
 }
 
-/* 
- * Computes the dominant eigenvalue and eigenvector using the power method.
- * Repeatedly multiplies a random vector by the matrix, normalizing each step, converging to the dominant eigenvector.
- */
-// FIXME Implement QR-algorith
-void power_method(matrix m, double *eigenvalue, matrix *eigenvector, int max_iter, double tol) {
-    if (m.rows != m.cols) {
-        printf("%sError: matrix must be square for power method.\n%s", URED, COLOR_RESET);
-        exit(1);
+// Helper function for Householder reflection to assist QR decomposition
+// Constructs a reflection matrix to zero out elements below the diagonal
+matrix householder_reflection(matrix a, int k) {
+    int n = a.rows;
+    if (k >= n - 1) {
+        return create_identity_matrix(n);
     }
-
-    int n = m.rows;
-    matrix v = create_matrix(n, 1);
-    for (int i = 0; i < n; i++) {
-        v.data[i][0] = (double)rand() /RAND_MAX;    // Start with random vector
-    }
-
     double norm = 0.0;
-    for (int i = 0; i < n; i++) {
-        norm += v.data[i][0] * v.data[i][0];
+    for (int i = k; i < n; i++) {
+        norm += a.data[i][k] * a.data[i][k];
     }
     norm = sqrt(norm);
-    for (int i = 0; i < n; i++) {
-        v.data[i][0] /= norm;   // Normilize initial vector
+    if (norm < TOLERANCE) { // Если норма близка к нулю
+        return create_identity_matrix(n);
     }
+    double x_k = a.data[k][k];
+    double sign = (x_k >= 0) ? 1.0 : -1.0;
+    double v_k = x_k + sign * norm; // v[0] = x_k + sign(x_k) * norm
+    double vTv = v_k * v_k;
+    for (int i = k + 1; i < n; i++) {
+        vTv += a.data[i][k] * a.data[i][k];
+    }
+    if (vTv < TOLERANCE) {
+        return create_identity_matrix(n);
+    }
+    double beta = 2.0 / vTv;
+    matrix Q = create_identity_matrix(n);
+    for (int i = k; i < n; i++) {
+        for (int j = k; j < n; j++) {
+            double v_i = (i == k) ? v_k : a.data[i][k];
+            double v_j = (j == k) ? v_k : a.data[j][k];
+            Q.data[i][j] -= beta * v_i * v_j;
+        }
+    }
+    return Q;
+}
 
-    double prev_lambda = 0.0;
-    for (int iter = 0; iter < max_iter; iter++) {
-        matrix temp = multiply_matrices(m, v);  // Apply matrix to current vector
-        double lambda = 0.0;
-        for (int i = 0; i < n; i++) {
-            lambda += v.data[i][0] * temp.data[i][0];   // Compute Rayleigh quotient for eigenvalue
+// Performs QR decomposition using Householder reflection
+// Decompose matrix m into orthogonal Q and upper triangular R
+void qr_decomposition(matrix m, matrix *Q, matrix *R) {
+    int n = m.rows;
+    *Q = create_identity_matrix(n);
+    *R = create_matrix(n, n);
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            (*R).data[i][j] = m.data[i][j];
         }
-        norm = 0.0;
-        for (int i = 0; i < n; i++) {
-            norm += temp.data[i][0] * temp.data[i][0];
-        }
-        norm = sqrt(norm);
-        for (int i = 0; i < n; i++) {
-            temp.data[i][0] /= norm;    // Normilize resulting vector
-        }
-        free_matrix(&v);
-        v = temp;
-        if (iter > 0 && fabs(lambda - prev_lambda) < tol) {     // Check convergence 
-            *eigenvalue = lambda;
-            *eigenvector = v;
-            return;
-        }
-        prev_lambda = lambda;
     }
-    printf("%sWarning: power method did not converge.\n%s", UYEL, COLOR_RESET);
-    *eigenvalue = prev_lambda;
-    *eigenvector = v;       // Return best approximation if not converged
+    for (int k = 0; k < n - 1; k++) {
+        matrix H = householder_reflection(*R, k);
+        matrix Qk = create_identity_matrix(n);
+        for (int i = k; i < n; i++) {
+            for (int j = k; j < n; j++) {
+                Qk.data[i][j] = H.data[i - k][j - k];
+            }
+        }
+        matrix temp = multiply_matrices(Qk, *Q);
+        free_matrix(Q);
+        *Q = temp;
+        matrix temp2 = multiply_matrices(Qk, *R);
+        free_matrix(R);
+        *R = temp2;
+        free_matrix(&Qk);
+        free_matrix(&H);
+    }
+}
+
+// Implemets QR algorithm to compute eigenvalues and eigenvectors
+// Iterativly applies QR decomposition to converge to diagonal form
+void qr_algorithm(matrix m, matrix *eigenvalues, matrix *eigenvectors, int max_iter, double tol) {
+    if (m.rows != m.cols) {
+        printf("%sError: matrix must be square.\n%s", URED, COLOR_RESET);
+        exit(1);
+    }
+    int n = m.rows;
+    matrix A = create_matrix(n, n);
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            A.data[i][j] = m.data[i][j];
+        }
+    }
+    matrix Q_total = create_identity_matrix(n);
+    for (int iter = 0; iter < max_iter; iter++) {
+        matrix Q, R;
+        qr_decomposition(A, &Q, &R);
+        matrix A_new = multiply_matrices(R, Q);
+        matrix Q_total_new = multiply_matrices(Q_total, Q);
+        free_matrix(&A);
+        A = A_new;
+        free_matrix(&Q_total);
+        Q_total = Q_total_new;
+        free_matrix(&Q);
+        free_matrix(&R);
+        int converged = 1;
+        for (int i = 1; i < n; i++) {
+            for (int j = 0; j < i; j++) {
+                if (fabs(A.data[i][j]) > tol) {
+                    converged = 0;
+                    break;
+                }
+            }
+            if (!converged) break;
+        }
+        if (converged) break;
+    }
+    *eigenvalues = create_matrix(n, 1);
+    for (int i = 0; i < n; i++) {
+        (*eigenvalues).data[i][0] = A.data[i][i];
+    }
+    *eigenvectors = Q_total;
+    free_matrix(&A);
 }
 
 /* 

@@ -60,6 +60,9 @@ double determinant(matrix m);
 // Helper function (Gaussian elimination)
 void gaussian_elimination(matrix *m);
 
+// Function for QR-algorithm to compute eigenvalues and eigenvectors
+void qr_algorithm(matrix m, matrix *eigenvalues, matrix *eigenvectors, int max_iter, double tol);
+
 // Function for finding inverse matrix (Gaussian-Jordan method)
 matrix inverse_matrix(matrix m);
 

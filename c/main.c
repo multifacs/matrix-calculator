@@ -161,6 +161,24 @@ void wait_for_enter() {
     while (getchar() != '\n');
 }
 
+// Displays eigenvalues and eigenvectors
+void display_eigen(matrix eigenvalues, matrix eigenvectors) {
+    printf("\n%sEigenvalues:\n%s", UGRN, COLOR_RESET);
+    
+    for (int i = 0; i < eigenvalues.rows; i++) {
+        printf("%f\n", eigenvalues.data[i][0]);
+    }
+
+    printf("\n%sEigenvectors:\n%s", UGRN, COLOR_RESET);
+    for (int i = 0; i < eigenvectors.cols; i++) {
+        printf("Eigenvector %d:\n", i + 1);
+        for (int j = 0; j < eigenvectors.rows; j++) {
+            printf("%f\n", eigenvectors.data[j][i]);
+        }
+        printf("\n");
+    }
+}
+
 // Save matrix into txt file
 void save_matrix_to_file(matrix m, const char* filename) {
     FILE* file = fopen(filename, "w");
@@ -353,19 +371,19 @@ void use_loaded_matrix(matrix loaded_matrix) {
         }
         case 12: { // Eigenvalues and Eigenvector
             if (loaded_matrix.rows != loaded_matrix.cols) {
-                printf("%sError: Matrix must be square.\n%s", URED, COLOR_RESET);
-            } else {
-                double eigenvalue;
-                matrix eigenvector;
-                int max_iter = 1000;
-                double tol = 1e-6;
-                power_method(loaded_matrix, &eigenvalue, &eigenvector, max_iter, tol);
-                printf("\n%sEigenvalue: %f\n%s", UGRN, eigenvalue, COLOR_RESET);
-                printf("%sEigenvector:\n%s", UGRN, COLOR_RESET);
-                display_matrix(eigenvector);
-                free_matrix(&eigenvector);
-            }
-            break;
+                    printf("%sError: matrix must be square.\n%s", URED, COLOR_RESET);
+                } else {
+                    matrix eigenvalues, eigenvectors;
+                    int max_iter = 1000;
+                    double tol = 1e-6;
+                    
+                    qr_algorithm(loaded_matrix, &eigenvalues, &eigenvectors, max_iter, tol);
+                    display_eigen(eigenvalues, eigenvectors);
+
+                    free_matrix(&eigenvalues);
+                    free_matrix(&eigenvectors);
+                }
+                break;
         }
         case 13: { // LU decomposition
             if (loaded_matrix.rows != loaded_matrix.cols) {
@@ -603,17 +621,18 @@ int main() {
                 if (m.rows != m.cols) {
                     printf("%sError: matrix must be square.\n%s", URED, COLOR_RESET);
                 } else {
-                    double eigenvalue;
-                    matrix eigenvector;
+                    matrix eigenvalues, eigenvectors;
                     int max_iter = 1000;
                     double tol = 1e-6;
-                    power_method(m, &eigenvalue, &eigenvector, max_iter, tol);
-                    printf("\n%sEigenvalue: %f\n%s", UGRN, eigenvalue, COLOR_RESET);
-                    printf("%sEigenvector:\n%s", UGRN, COLOR_RESET);
-                    display_matrix(eigenvector);
-                    free_matrix(&eigenvector);
+                    
+                    qr_algorithm(m, &eigenvalues, &eigenvectors, max_iter, tol);
+                    display_eigen(eigenvalues, eigenvectors);
+
+                    free_matrix(&eigenvalues);
+                    free_matrix(&eigenvectors);
                 }
                 free_matrix(&m);
+
                 wait_for_enter();
                 break;
             }
@@ -706,6 +725,9 @@ int main() {
         }
     } while (choice != 21);
 
-    if (matrix_loaded) free_matrix(&saved_matrix);
+    if (matrix_loaded && saved_matrix.data != NULL) {
+    free_matrix(&saved_matrix);
+    }
+
     return 0;
 }

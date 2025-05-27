@@ -168,6 +168,25 @@ START_TEST(test_multiply_matrices_large) {
 }
 END_TEST
 
+// Test for QR algorithm accuracy
+START_TEST(test_qr_algorithm) {
+    matrix a = create_matrix(2, 2);
+    a.data[0][0] = 2; a.data[0][1] = 1;
+    a.data[1][0] = 1; a.data[1][1] = 2;
+
+    matrix eigenvalues, eigenvectors;
+    qr_algorithm(a, &eigenvalues, &eigenvectors, 1000, 1e-6);
+
+    // Expected eigenvalues: 3 and 1 (for symmetric matrix [[2,1],[1,2]])
+    ck_assert_double_eq_tol(eigenvalues.data[0][0], 3.0, 1e-2);
+    ck_assert_double_eq_tol(eigenvalues.data[1][0], 1.0, 1e-2);
+
+    free_matrix(&a);
+    free_matrix(&eigenvalues);
+    free_matrix(&eigenvectors);
+}
+END_TEST
+
 // Scalar multiplication test
 START_TEST(test_scalar_multiply) {
 
@@ -404,24 +423,6 @@ START_TEST(test_matrix_norms) {
 }
 END_TEST
 
-// Test for power method
-START_TEST(test_power_method) {
-    matrix a = create_matrix(2, 2);
-    a.data[0][0] = 2; a.data[0][1] = 1;
-    a.data[1][0] = 1; a.data[1][1] = 2;
-
-    double eigenvalue;
-    matrix eigenvector;
-    power_method(a, &eigenvalue, &eigenvector, 1000, 1e-6);
-
-    // Expected dominant eigenvalue is 3
-    ck_assert_double_eq_tol(eigenvalue, 3.0, 1e-2);
-
-    free_matrix(&a);
-    free_matrix(&eigenvector);
-}
-END_TEST
-
 // Create test suite
 Suite* matrix_suite(void) {
     Suite *s;
@@ -442,13 +443,13 @@ Suite* matrix_suite(void) {
     tcase_add_test(tc_core, test_inverse_matrix);
     tcase_add_test(tc_core, test_solve_system);
     tcase_add_test(tc_core, test_rank);
+    tcase_add_test(tc_core, test_qr_algorithm);
     tcase_add_test(tc_core, test_generate_random_matrix);
     tcase_add_test(tc_core, test_matrix_power_positive);
     tcase_add_test(tc_core, test_matrix_power_negative);
     tcase_add_test(tc_core, test_cholesky_decomposition);
     tcase_add_test(tc_core, test_lu_decomposition);
     tcase_add_test(tc_core, test_matrix_norms);
-    tcase_add_test(tc_core, test_power_method);
     suite_add_tcase(s, tc_core);
     return s;
 }
