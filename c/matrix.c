@@ -11,7 +11,8 @@
 #include "matrix.h"     // Custom header for matrix structure and function declarations
 
 // Constants for tolerance and color codes
-#define TOLERANCE       1e-10           // Tolerance for floating-point comparisons
+#define TOLERANCE       1e-9           // Tolerance for floating-point comparisons
+#define DISPLAY_TOL     1e-3           // Updated tolerance for zero display
 
 #define URED            "\e[4;31m"      // Red underlined for errors
 #define UGRN            "\e[4;32m"      // Green underlined for results
@@ -57,7 +58,6 @@ void free_matrix(matrix *m) {
     m -> cols = 0;
 }
 
-
 // Inputs matrix elements from the user to ensure each element is correctly entered and validated.
 void input_matrix(matrix *m) {
     printf("\n%sInput matrix elements (%d x %d):\n%s", UBLU, m -> rows, m -> cols, COLOR_RESET);
@@ -78,9 +78,8 @@ void input_matrix(matrix *m) {
     while (getchar() != '\n');      // Clear any remaining input
 }
 
-// Inputs matrix elements from the user with validation. Ensures only numeric values are accepted, prompting for re-entry on invalid input.
-void print_matrix(matrix m)
-{
+// Prints matrix elements with consistent zero display using a unified threshold
+void print_matrix(matrix m) {
     printf("\n%sMatrix [%d x %d]:\n%s", UYEL, m.rows, m.cols, COLOR_RESET);
 
     int max_width = 0;
@@ -88,33 +87,31 @@ void print_matrix(matrix m)
     for (int i = 0; i < m.rows; i++) {
         for (int j = 0; j < m.cols; j++) {
             double val = m.data[i][j];
-            if (fabs(fmod(val, 1.0)) < TOLERANCE) {     // Check if value is effectively an integer
+            if (fabs(val) < DISPLAY_TOL) {
+                snprintf(buffer, sizeof(buffer), "0");
+            } else if (fabs(fmod(val, 1.0)) < TOLERANCE) {
                 snprintf(buffer, sizeof(buffer), "%lld", (long long)val);
             } else {
-                snprintf(buffer, sizeof(buffer), "%.2f", val);      // Use two decimal places
+                snprintf(buffer, sizeof(buffer), "%.2f", val);
             }
             int len = strlen(buffer);
-            if (len > max_width) {
-                max_width = len;        //Find the maximum width for aligment
-            }
+            if (len > max_width) max_width = len;
         }
     }
 
-    // Print top border
     printf("+");
     for (int j = 0; j < m.cols; j++) {
-        for (int k = 0; k < max_width + 2; k++) {
-            printf("-");
-        }
+        for (int k = 0; k < max_width + 2; k++) printf("-");
     }
     printf("+\n");
 
-    // Print matrix rows
     for (int i = 0; i < m.rows; i++) {
         printf("|");
         for (int j = 0; j < m.cols; j++) {
             double val = m.data[i][j];
-            if (fabs(fmod(val, 1.0)) < TOLERANCE) {
+            if (fabs(val) < DISPLAY_TOL) {
+                printf(" %*s ", max_width, "0");
+            } else if (fabs(fmod(val, 1.0)) < TOLERANCE) {
                 printf(" %*d ", max_width, (int)val);
             } else {
                 printf(" %*.2f ", max_width, val);
@@ -123,12 +120,9 @@ void print_matrix(matrix m)
         printf("|\n");
     }
 
-    // Print bottom border
     printf("+");
     for (int j = 0; j < m.cols; j++) {
-        for (int k = 0; k < max_width + 2; k++) {
-            printf("-");
-        }
+        for (int k = 0; k < max_width + 2; k++) printf("-");
     }
     printf("+\n");
 }
@@ -183,7 +177,7 @@ void edit_matrix(matrix *m) {
                 printf("%sInvalid choice. Please enter 'y' or 'n'.%s\n", URED, COLOR_RESET);
             }
         } else {
-            printf("%sInvalid input. Please enter a single character ('y' ofr 'n').%s\n", URED, COLOR_RESET);
+            printf("%sInvalid input. Please enter a single character ('y' or 'n').%s\n", URED, COLOR_RESET);
         }
     } while (!valid_choice);    // Repeat until input is valid
 }
@@ -440,7 +434,7 @@ matrix multiply_matrices_strassen(matrix a, matrix b) {
     // Combine submatrices into the final result
     matrix result = combine_matrix(c11, c12, c21, c22);
 
-    // Free temporary matrtices
+    // Free temporary matrices
     free_matrix(&a11); free_matrix(&a12); free_matrix(&a21); free_matrix(&a22);
     free_matrix(&b11); free_matrix(&b12); free_matrix(&b21); free_matrix(&b22);
     free_matrix(&p1); free_matrix(&p2); free_matrix(&p3); free_matrix(&p4); free_matrix(&p5); free_matrix(&p6); free_matrix(&p7);
@@ -690,36 +684,50 @@ int rank(matrix m)
  */
 matrix matrix_power(matrix m, int exponent) {
     if (m.rows != m.cols) {
-        printf("%sError: matrix must be square for exponentiation.\n%s", URED, COLOR_RESET);
+        printf("%sError: matrix must be square.%s\n", URED, COLOR_RESET);
         exit(1);
     }
 
     if (exponent == 0) {
-        return create_identity_matrix(m.rows);      // Any matrix to power 0 is the identity matrix
-    } else if (exponent > 0) {
-        matrix result = create_identity_matrix(m.rows);
-        for (int i = 0; i < exponent; i++) {
-            matrix temp = multiply_matrices(result, m);
-            free_matrix(&result);
-            result = temp;      // Repeated multiplication for positive powers
+        return create_identity_matrix(m.rows);
+    }
+
+    matrix result = create_identity_matrix(m.rows);
+    matrix base = create_matrix(m.rows, m.cols);
+    for (int i = 0; i < m.rows; i++) {
+        for (int j = 0; j < m.cols; j++) {
+            base.data[i][j] = m.data[i][j];
         }
-        return result;
-    } else {
-        if (determinant(m) == 0) {
-            printf("%sError: matrix is singular and cannot be raised to a negative power.\n%s", URED, COLOR_RESET);
-            exit(1);
+    }
+
+    int abs_exp = abs(exponent);
+    while (abs_exp > 0) {
+        if (abs_exp % 2 == 1) {
+            matrix temp = multiply_matrices(result, base);
+            free_matrix(&result);
+            result = temp;
         }
 
-        matrix m_inv = inverse_matrix(m);
-        matrix result = create_identity_matrix(m.rows);
-        for (int i = 0; i < -exponent; i++) {
-            matrix temp = multiply_matrices(result, m_inv);
-            free_matrix(&result);
-            result = temp;      // Repeated multiplication with inverse for negative powers
-        }
-        free_matrix(&m_inv);
-        return result;
+        matrix temp = multiply_matrices(base, base);
+        free_matrix(&base);
+        base = temp;
+        abs_exp /= 2;
     }
+
+    if (exponent < 0) {
+        if (fabs(determinant(result)) < TOLERANCE) {
+            printf("%sError: matrix is singular and cannot be inverted.%s\n", URED, COLOR_RESET);
+            free_matrix(&result);
+            free_matrix(&base);
+            exit(1);
+        }
+        matrix inv = inverse_matrix(result);
+        free_matrix(&result);
+        result = inv;
+    }
+
+    free_matrix(&base);
+    return result;
 }
 
 /* 
@@ -798,7 +806,7 @@ matrix householder_reflection(matrix a, int k) {
         norm += a.data[i][k] * a.data[i][k];
     }
     norm = sqrt(norm);
-    if (norm < TOLERANCE) { // Если норма близка к нулю
+    if (norm < TOLERANCE) { 
         return create_identity_matrix(n);
     }
     double x_k = a.data[k][k];
@@ -853,8 +861,8 @@ void qr_decomposition(matrix m, matrix *Q, matrix *R) {
     }
 }
 
-// Implemets QR algorithm to compute eigenvalues and eigenvectors
-// Iterativly applies QR decomposition to converge to diagonal form
+// Implements QR algorithm to compute eigenvalues and eigenvectors
+// Iteratively applies QR decomposition to converge to diagonal form
 void qr_algorithm(matrix m, matrix *eigenvalues, matrix *eigenvectors, int max_iter, double tol) {
     if (m.rows != m.cols) {
         printf("%sError: matrix must be square.\n%s", URED, COLOR_RESET);
@@ -979,4 +987,110 @@ double infinity_norm(matrix m) {
         }
     }
     return max_sum;
+}
+
+// Function for SVD computation with QR-algorithm
+void svd(matrix A, matrix *U, matrix *Sigma, matrix *V) {
+    int m = A.rows;
+    int n = A.cols;
+
+    // Calculate A^T and A^TA and AA^T
+    matrix At = transpose_matrix(A);
+    matrix AtA = multiply_matrices(At, A);      // n x n
+    matrix AAt = multiply_matrices(A, At);      // m x m
+
+    // Calculate eigenvalues and eigenvectors for AtA (V)
+    matrix eigenvalues_V, eigenvectors_V;
+    qr_algorithm(AtA, &eigenvalues_V, &eigenvectors_V, 1000, 1e-6);
+    *V = eigenvectors_V;
+
+    // Calculate eigenvalues and eigenvectors for AAt (U)
+    matrix eigenvalues_U, eigenvectors_U;
+    qr_algorithm(AAt, &eigenvalues_U, &eigenvectors_U, 1000, 1e-6);
+    *U = eigenvectors_U;
+
+    // Creating matrix Sigma (m x n)
+    *Sigma = create_matrix(m, n);
+    for (int i = 0; i < m; i++) {
+        for (int j = 0; j < n; j++) {
+            (*Sigma).data[i][j] = 0.0;
+        }
+    }
+
+    int min_dim = (m < n) ? m : n;
+    for (int i = 0; i < min_dim; i++) {
+        double sigma = sqrt(fabs(eigenvalues_V.data[i][0]));
+        (*Sigma).data[i][i] = sigma;        // Fill diagonal with singular numbers
+    }
+
+    free_matrix(&At);
+    free_matrix(&AtA);
+    free_matrix(&AAt);
+    free_matrix(&eigenvalues_U);
+    free_matrix(&eigenvalues_V);
+}
+
+// Function for Schur decomposition A = QTQ^T
+// Q orthogonal, T quasi-triangular
+void schur_decomposition(matrix m, matrix *Q, matrix *T, int max_iter, double tol) {
+    if (m.rows != m.cols) {
+        printf("%sError: matrix must be square for Schur decomposition.\n%s", URED, COLOR_RESET);
+        exit(1);
+    }
+
+    int n = m.rows;
+    matrix A = create_matrix(n, n);
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            A.data[i][j] = m.data[i][j];
+        }
+    }
+
+    *Q = create_identity_matrix(n);
+    for (int iter = 0; iter < max_iter; iter++) {
+        matrix Q_iter, R;
+        qr_decomposition(A, &Q_iter, &R);
+        matrix A_new = multiply_matrices(R, Q_iter);
+        matrix Q_new = multiply_matrices(*Q, Q_iter);
+        free_matrix(&A);
+        A = A_new;
+        free_matrix(Q);
+        *Q = Q_new;
+        free_matrix(&Q_iter);
+        free_matrix(&R);
+
+        int converged = 1;
+        for (int i = 1; i < n; i++) {
+            if (fabs(A.data[i][i - 1]) > tol) {
+                converged = 0;
+                break;
+            }
+        }
+        if (converged) break;
+    }
+
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            if (fabs((*Q).data[i][j]) < DISPLAY_TOL) {
+                (*Q).data[i][j] = 0.0;
+            }
+        }
+    }
+
+    *T = create_matrix(n, n);
+    for (int i = 0; i < n; i++) {
+        for (int j = 0; j < n; j++) {
+            if (i > j) {  
+                (*T).data[i][j] = 0.0;
+            } else {
+                double val = A.data[i][j];
+                if (fabs(val) < DISPLAY_TOL) {
+                    val = 0.0;
+                }
+                (*T).data[i][j] = val;
+            }
+        }
+    }
+
+    free_matrix(&A);
 }

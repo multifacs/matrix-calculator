@@ -12,6 +12,8 @@ typedef struct
     double **data;
 } matrix;
 
+// Functions prototypes with documentation
+
 // Create matrix of rows x cols size
 matrix create_matrix(int rows, int cols);
 
@@ -87,11 +89,11 @@ matrix matrix_power(matrix m, int exponent);
 // Function for Cholesky decomposition (defined for symmetric definite matrix)
 matrix cholesky_decomposition(matrix m);
 
-// Function for eigenvalue and eigenvector
-void power_method(matrix m, double *eigenvalue, matrix *eigenvector, int max_iter, double tol);
-
 // Function for LU-decomposition
 void lu_decomposition(matrix m, matrix *L, matrix *U);
+
+// Function for Schur decomposition
+void schur_decomposition(matrix m, matrix *Q, matrix *T, int max_iter, double tol);
 
 // Function for Frobenius form
 double frobenius_norm(matrix m);
@@ -101,6 +103,9 @@ double one_norm(matrix m);
 
 // Function for infinity-norm
 double infinity_norm(matrix m);
+
+// Function for singular value decomposition
+void svd(matrix A, matrix *U, matrix *Sigma, matrix *V);
 
 // Functions to check matrix properties
 int is_diagonal(matrix m);

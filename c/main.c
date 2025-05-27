@@ -44,7 +44,9 @@ void show_menu() {
     printf("%s18. Load matrix from file\n%s", UYEL, COLOR_RESET);
     printf("%s19. Use loaded matrix for operations\n%s", UYEL, COLOR_RESET);
     printf("%s20. Save random matrix to file\n%s", UYEL, COLOR_RESET);
-    printf("%s21. Exit\n\n%s", UYEL, COLOR_RESET);
+    printf("%s21. Singular value decomposition (SVD)\n%s", UYEL, COLOR_RESET);
+    printf("%s22. Schur decomposition\n%s", UYEL, COLOR_RESET);
+    printf("%s23. Exit\n\n%s", UYEL, COLOR_RESET);
 }
 
 /* 
@@ -62,10 +64,10 @@ int get_user_choice() {
         input[strcspn(input, "\n")] = 0;
         char *endptr;
         long choice = strtol(input, &endptr, 10);
-        if (*endptr == '\0' && choice >= 1 && choice <= 21) {
+        if (*endptr == '\0' && choice >= 1 && choice <= 23) {
             return (int)choice;
         } else {
-            printf("%sInvalid input. Please enter a number between 1 and 21.\n%s", URED, COLOR_RESET);
+            printf("%sInvalid input. Please enter a number between 1 and 23.\n%s", URED, COLOR_RESET);
         }
     }
 }
@@ -256,6 +258,7 @@ void use_loaded_matrix(matrix loaded_matrix) {
     printf("%s12. Eigenvalues and Eigenvector\n%s", UYEL, COLOR_RESET);
     printf("%s13. LU decomposition\n%s", UYEL, COLOR_RESET);
     printf("%s14. Matrix norms\n%s", UYEL, COLOR_RESET);
+    printf("%s15. Singular Values Decomposition(SVD)\n\n%s", UYEL, COLOR_RESET);
     printf("%sEnter your choice: %s", UBLU, COLOR_RESET);
     scanf("%d", &op_choice);
     getchar(); // Consume newline
@@ -374,8 +377,8 @@ void use_loaded_matrix(matrix loaded_matrix) {
                     printf("%sError: matrix must be square.\n%s", URED, COLOR_RESET);
                 } else {
                     matrix eigenvalues, eigenvectors;
-                    int max_iter = 1000;
-                    double tol = 1e-6;
+                    int max_iter = 2000;
+                    double tol = 1e-10;
                     
                     qr_algorithm(loaded_matrix, &eigenvalues, &eigenvectors, max_iter, tol);
                     display_eigen(eigenvalues, eigenvectors);
@@ -409,6 +412,29 @@ void use_loaded_matrix(matrix loaded_matrix) {
             printf("%sInfinity norm: %f\n%s", UGRN, inf_n, COLOR_RESET);
             break;
         }
+
+        case 15: {  // SVD
+            printf("\n%sSingular value decomposition (SVD):%s\n", UGRN, COLOR_RESET);
+            matrix U, Sigma, V;
+
+            svd(loaded_matrix, &U, &Sigma, &V);
+
+            printf("%sMatrix U:%s\n", UGRN, COLOR_RESET);
+            display_matrix(U);
+
+            printf("%sMatrix Sigma:%s\n", UGRN, COLOR_RESET);
+            display_matrix(Sigma);
+
+            printf("%sMatrix V:%s\n", UGRN, COLOR_RESET);
+            display_matrix(V);
+
+            free_matrix(&U);
+            free_matrix(&Sigma);
+            free_matrix(&V);
+
+            wait_for_enter();
+            break;
+            }
         default:
             printf("%sInvalid operation choice.\n%s", URED, COLOR_RESET);
     }
@@ -622,8 +648,8 @@ int main() {
                     printf("%sError: matrix must be square.\n%s", URED, COLOR_RESET);
                 } else {
                     matrix eigenvalues, eigenvectors;
-                    int max_iter = 1000;
-                    double tol = 1e-6;
+                    int max_iter = 2000;
+                    double tol = 1e-10;
                     
                     qr_algorithm(m, &eigenvalues, &eigenvectors, max_iter, tol);
                     display_eigen(eigenvalues, eigenvectors);
@@ -717,13 +743,70 @@ int main() {
                 wait_for_enter();
                 break;
             }
-            case 21:
+
+            case 21: {
+                printf("\n%sSingular value decomposition (SVD):%s\n", UGRN, COLOR_RESET);
+
+                matrix m = input_matrix_new();
+                matrix U, Sigma, V;
+
+                svd(m, &U, &Sigma, &V);
+
+                printf("%sMatrix U:%s\n", UGRN, COLOR_RESET);
+                display_matrix(U);
+
+                printf("%sMatrix Sigma:%s\n", UGRN, COLOR_RESET);
+                display_matrix(Sigma);
+
+                printf("%sMatrix V:%s\n", UGRN, COLOR_RESET);
+                display_matrix(V);
+
+                free_matrix(&m);
+                free_matrix(&U);
+                free_matrix(&Sigma);
+                free_matrix(&V);
+
+                wait_for_enter();
+                break;
+            }
+
+            case 22: {
+                printf("\n%sSchur decomposition:%s\n", UGRN, COLOR_RESET);
+
+                matrix m = input_matrix_new();
+                if (m.rows != m.cols) {
+                    printf("%sError: matrix must be square.\n%s", URED, COLOR_RESET);
+                } else {
+                    matrix Q, T;
+
+                    int max_iter = 1000;
+                    double tol = 1e-8;
+
+                    schur_decomposition(m, &Q, &T, max_iter, tol);
+
+                    printf("%sOrthogonal matrix Q:\n%s", UGRN, COLOR_RESET);
+                    display_matrix(Q);
+
+                    printf("%sQuasi-triangular matrix T:\n%s", UGRN, COLOR_RESET);
+                    display_matrix(T);
+
+                    free_matrix(&Q);
+                    free_matrix(&T);
+                }
+
+                free_matrix(&m);
+
+                wait_for_enter();
+                break;
+            }
+
+            case 23:
                 printf("\nExit...\n");
                 break;
             default:
-                printf("\n%sWrong choice. Please enter a number between 1 and 21.\n%s", URED, COLOR_RESET);
+                printf("\n%sWrong choice. Please enter a number between 1 and 22.\n%s", URED, COLOR_RESET);
         }
-    } while (choice != 21);
+    } while (choice != 23);
 
     if (matrix_loaded && saved_matrix.data != NULL) {
     free_matrix(&saved_matrix);
