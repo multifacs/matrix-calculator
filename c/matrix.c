@@ -1,91 +1,236 @@
+#include "matrix.h"
+#include <math.h>
+#include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <math.h>
+#include <string.h>
 #include <time.h>
-#include "matrix.h"
 
-#define TOLERANCE       1e-10
+#define TOLERANCE 1e-10
 
-#define UBLK            "\e[4;30m"
-#define URED            "\e[4;31m"
-#define UGRN            "\e[4;32m"
-#define UYEL            "\e[4;33m"
-#define UBLU            "\e[4;34m"
-#define UMAG            "\e[4;35m"
-#define UCYN            "\e[4;36m"
-#define COLOR_RESET     "\e[0m"
+#define UBLK "\e[4;30m"
+#define URED "\e[4;31m"
+#define UGRN "\e[4;32m"
+#define UYEL "\e[4;33m"
+#define UBLU "\e[4;34m"
+#define UMAG "\e[4;35m"
+#define UCYN "\e[4;36m"
+#define COLOR_RESET "\e[0m"
 
-// Function for creating matrix
+/**
+ * Creates a matrix with the specified number of rows and columns.
+ * All elements are initialized to 0.
+ *
+ * @param rows Number of rows (must be > 0).
+ * @param cols Number of columns (must be > 0).
+ * @return A matrix structure. If allocation fails, returns a matrix with {0, 0, NULL}.
+ */
 matrix create_matrix(int rows, int cols) {
     matrix m = {0, 0, NULL};
-    m.rows = rows;
-    m.cols = cols;
-    m.data = (double**)malloc(rows * sizeof(double *));
-    if (m.data == NULL) {
-        fprintf(stderr, "Error: Failed to allocate memory for matrix rows.\n");
+
+    if (rows <= 0 || cols <= 0) {
+        fprintf(stderr, "Error: Invalid matrix dimensions (%d, %d).\n", rows, cols);
         return m;
     }
-    for (int i = 0; i < rows; i++) {
-        m.data[i] = (double *)malloc(cols * sizeof(double));
-        if (m.data[i] == NULL) {
+
+    m.rows = rows;
+    m.cols = cols;
+
+    // Allocate memory for row pointers
+    m.data = (double **)malloc(rows * sizeof(double *));
+    if (m.data == NULL) {
+        fprintf(stderr, "Error: Failed to allocate memory for matrix rows.\n");
+        goto cleanup; // все поля уже инициализированы, можно просто вернуть m
+    }
+
+    int i = 0;
+
+    // Allocate memory for each row and initialize to 0
+    for (i = 0; i < rows; i++) {
+        m.data[i] = (double *)calloc(cols, sizeof(double));
+        if (m.data[i] == NULL || m.data[i][0] != 0) {
             fprintf(stderr, "Error: Failed to allocate memory for matrix row %d.\n", i);
-            for (int k = 0; k < i; k++) free(m.data[k]);
-            free(m.data);
-            m.data = NULL;
-            return m;
+            goto cleanup_rows; // освобождаем уже выделенную память
         }
     }
+
+    return m;
+
+cleanup_rows:
+    // Освобождаем уже выделенные строки
+    for (int k = 0; k < i; k++) {
+        free(m.data[k]);
+    }
+    free(m.data);
+
+cleanup:
+    m.rows = 0;
+    m.cols = 0;
+    m.data = NULL;
     return m;
 }
 
-// Free matrix memory
+/**
+ * Frees the memory allocated for a matrix and resets its dimensions.
+ * Safe to call even if the matrix is already empty (no double-free).
+ *
+ * @param m Pointer to the matrix to be freed.
+ */
 void free_matrix(matrix *m) {
-    for (int i = 0; i < m -> rows; i++) {
-        free(m -> data[i]);
+    if (m == NULL) {
+        fprintf(stderr, "Error: Matrix already clear.\n");
+        return; // Защита от NULL указателя
     }
-    free(m -> data);
-    m -> data = NULL;
-    m -> rows = 0;
-    m -> cols = 0;
+
+    if (m->data != NULL) {
+        for (int i = 0; i < m->rows; i++) {
+            if (m->data[i] != NULL) {
+                free(m->data[i]); // Освобождаем каждую строку
+            }
+        }
+        free(m->data); // Освобождаем массив указателей
+    }
+
+    m->data = NULL; // Явный сброс указателя
+    m->rows = 0;    // Сброс размеров
+    m->cols = 0;
 }
 
+/**
+ * Вспомогательная функция для очистки stdin.
+ * Удаляет все символы из буфера ввода до конца строки или EOF.
+ */
+static void clear_stdin() {
+    int c;
+    // Читаем и игнорируем символы пока не встретим \n или EOF
+    while ((c = getchar()) != '\n' && c != EOF)
+        ;
+}
 
-// Function for input of matrix elements
+/**
+ * Функция для ввода элементов матрицы построчно.
+ * Пользователь вводит каждую строку матрицы целиком, разделяя числа пробелами.
+ * При некорректном вводе (не числа, недостаточно/слишком много чисел) строка запрашивается заново.
+ *
+ * @param m Указатель на матрицу, которую нужно заполнить
+ */
 void input_matrix(matrix *m) {
-    printf("Input matrix elements (%d x %d):\n", m->rows, m->cols);
+    // Проверка на валидность указателя на матрицу и её данных
+    if (m == NULL || m->data == NULL) {
+        fprintf(stderr, "Error: Invalid matrix pointer or uninitialized data.\n");
+        return;
+    }
+
+    // Вывод инструкции для пользователя
+    printf("Enter matrix elements (%d x %d), row by row:\n", m->rows, m->cols);
+    printf("Separate elements with spaces. Example for 2x2:\n");
+    printf("1.5 2.0\n3.0 4.5\n\n");
+
+    // Цикл по строкам матрицы
     for (int i = 0; i < m->rows; i++) {
-        for (int j = 0; j < m->cols; j++) {
-            printf("Element [%d][%d]: ", i, j);
-            while (scanf("%lf", &m->data[i][j]) != 1) {
-                int c;
-                while ((c = getchar()) != '\n' && c != EOF);
-                printf("Invalid input. Please enter a number.\n");
-                printf("Element [%d][%d]: ", i, j);
+        bool row_input_valid = false; // Флаг успешного ввода строки
+
+        // Повторяем ввод, пока не получим корректные данные для всей строки
+        while (!row_input_valid) {
+            // Запрос на ввод строки (i+1 для удобства пользователя)
+            printf("Row %d: ", i + 1);
+
+            // Буфер для хранения введённой строки (ограничен размером 1024 символа)
+            char buffer[1024];
+
+            // Чтение строки из stdin
+            if (fgets(buffer, sizeof(buffer), stdin) == NULL) {
+                fprintf(stderr, "Error reading input.\n");
+                clear_stdin(); // Очистка буфера ввода при ошибке
+                continue;
+            }
+
+            // Разбиваем строку на токены (числа) по пробелам и переносам строк
+            char *token = strtok(buffer, " \n");
+            int j = 0;                // Счётчик столбцов
+            bool parse_error = false; // Флаг ошибки парсинга
+
+            // Обрабатываем все токены в строке или пока не заполним строку матрицы
+            while (token != NULL && j < m->cols) {
+                // Пытаемся преобразовать токен в число типа double
+                if (sscanf(token, "%lf", &m->data[i][j]) != 1) {
+                    printf("Invalid input at column %d. Please enter numbers only.\n", j + 1);
+                    parse_error = true;
+                    break; // Выходим из цикла при ошибке
+                }
+                // Получаем следующий токен
+                token = strtok(NULL, " \n");
+                j++; // Переходим к следующему столбцу
+            }
+
+            // Проверяем корректность введённых данных
+            if (parse_error) {
+                clear_stdin(); // Очищаем буфер ввода при ошибке парсинга
+            } else if (j != m->cols) {
+                // Проверяем, что введено ровно cols чисел
+                printf("Expected %d elements, but got %d. Please try again.\n", m->cols, j);
+                clear_stdin();
+            } else {
+                row_input_valid = true; // Успешный ввод строки
             }
         }
     }
-    int c;
-    while ((c = getchar()) != '\n' && c != EOF);
 }
 
-// Function for matrix output
-void print_matrix(matrix m)
-{
-    printf("matrix [%d x %d]:\n", m.rows, m.cols);
+/**
+ * Prints a matrix to stdout with formatted output.
+ * - Integer values are printed without decimal places
+ * - Floating-point values are printed with 2 decimal places
+ * - Handles special cases (NaN, infinity)
+ * - Uses consistent column alignment
+ *
+ * @param m The matrix to be printed
+ */
+void print_matrix(matrix m) {
+    // Validate matrix dimensions and data pointer
+    if (m.rows <= 0 || m.cols <= 0) {
+        fprintf(stderr, "Error: Invalid matrix dimensions (%d x %d)\n", m.rows, m.cols);
+        return;
+    }
+    if (m.data == NULL) {
+        fprintf(stderr, "Error: Matrix data is NULL\n");
+        return;
+    }
+
+    // Print matrix header with dimensions
+    printf("Matrix [%d x %d]:\n", m.rows, m.cols);
+
+    // Print each row
     for (int i = 0; i < m.rows; i++) {
+        // Print each column in the row
         for (int j = 0; j < m.cols; j++) {
             double val = m.data[i][j];
-            if (fabs(fmod(val, 1.0)) < TOLERANCE) {
-                printf("%d\t", (int)val);
+
+            // Handle special floating-point cases
+            if (isnan(val)) {
+                printf(" NaN\t");
+                continue;
+            }
+            if (isinf(val)) {
+                printf(" INF\t");
+                continue;
+            }
+
+            // Check if value is effectively an integer
+            if (fabs(val - round(val)) < TOLERANCE) {
+                // Print as integer if within tolerance
+                printf("%6d\t", (int)round(val));
             } else {
-                printf("%.2f\t", val);
+                // Print as float with 2 decimal places otherwise
+                printf("%6.2f\t", val);
             }
         }
+        // New line after each row
         printf("\n");
     }
 }
 
-//Function for generation of random matrix
+// Function for generation of random matrix
 matrix generate_random_matrix(int rows, int cols, double min_val, double max_val) {
     matrix m = create_matrix(rows, cols);
     for (int i = 0; i < rows; i++) {
@@ -123,7 +268,7 @@ matrix create_identity_matrix(int size) {
 }
 
 // Check for diagonality
-int is_diagonal (matrix m) {
+int is_diagonal(matrix m) {
     for (int i = 0; i < m.rows; i++) {
         for (int j = 0; j < m.cols; j++) {
             if (i != j && fabs(m.data[i][j]) > TOLERANCE) {
@@ -136,7 +281,8 @@ int is_diagonal (matrix m) {
 
 // Check for symmetry
 int is_symmetric(matrix m) {
-    if (m.rows != m.cols) return 0;
+    if (m.rows != m.cols)
+        return 0;
     for (int i = 0; i < m.rows; i++) {
         for (int j = 0; j < i; j++) {
             if (fabs(m.data[i][j] - m.data[j][i]) > TOLERANCE) {
@@ -149,7 +295,8 @@ int is_symmetric(matrix m) {
 
 // Check for orthogonality
 int is_orthogonal(matrix m) {
-    if (m.rows != m.cols) return 0;
+    if (m.rows != m.cols)
+        return 0;
     matrix transp = transpose_matrix(m);
     matrix product = multiply_matrices(m, transp);
     matrix identity = create_identity_matrix(m.rows);
@@ -188,7 +335,8 @@ int is_lower_triangular(matrix m) {
 
 // Check for identity
 int is_identity(matrix m) {
-    if (m.rows != m.cols) return 0;
+    if (m.rows != m.cols)
+        return 0;
     for (int i = 0; i < m.rows; i++) {
         for (int j = 0; j < m.cols; j++) {
             if (i == j && fabs(m.data[i][j] - 1.0) > TOLERANCE) {
@@ -202,18 +350,14 @@ int is_identity(matrix m) {
 }
 
 // Function for adding two matrices
-matrix add_matrices(matrix a, matrix b)
-{
-    if (a.rows != b.rows || a.cols != b.cols)
-    {
+matrix add_matrices(matrix a, matrix b) {
+    if (a.rows != b.rows || a.cols != b.cols) {
         printf("Error: matrices must have the same dimensions for addition.\n");
         exit(1);
     }
     matrix result = create_matrix(a.rows, a.cols);
-    for (int i = 0; i < a.rows; i++)
-    {
-        for (int j = 0; j < a.cols; j++)
-        {
+    for (int i = 0; i < a.rows; i++) {
+        for (int j = 0; j < a.cols; j++) {
             result.data[i][j] = a.data[i][j] + b.data[i][j];
         }
     }
@@ -221,18 +365,14 @@ matrix add_matrices(matrix a, matrix b)
 }
 
 // Function for subtracting two matrices
-matrix subtract_matrices(matrix a, matrix b)
-{
-    if (a.rows != b.rows || a.cols != b.cols)
-    {
+matrix subtract_matrices(matrix a, matrix b) {
+    if (a.rows != b.rows || a.cols != b.cols) {
         printf("Error: matrices must have the same dimensions for subtraction.\n");
         exit(1);
     }
     matrix result = create_matrix(a.rows, a.cols);
-    for (int i = 0; i < a.rows; i++)
-    {
-        for (int j = 0; j < a.cols; j++)
-        {
+    for (int i = 0; i < a.rows; i++) {
+        for (int j = 0; j < a.cols; j++) {
             result.data[i][j] = a.data[i][j] - b.data[i][j];
         }
     }
@@ -240,21 +380,16 @@ matrix subtract_matrices(matrix a, matrix b)
 }
 
 // Function for multiplying two matrices
-matrix multiply_matrices(matrix a, matrix b)
-{
-    if (a.cols != b.rows)
-    {
+matrix multiply_matrices(matrix a, matrix b) {
+    if (a.cols != b.rows) {
         printf("Error: number of columns in first matrix must equal number of rows in second matrix for multiplication.\n");
         exit(1);
     }
     matrix result = create_matrix(a.rows, b.cols);
-    for (int i = 0; i < a.rows; i++)
-    {
-        for (int j = 0; j < b.cols; j++)
-        {
+    for (int i = 0; i < a.rows; i++) {
+        for (int j = 0; j < b.cols; j++) {
             result.data[i][j] = 0;
-            for (int k = 0; k < a.cols; k++)
-            {
+            for (int k = 0; k < a.cols; k++) {
                 result.data[i][j] += a.data[i][k] * b.data[k][j];
             }
         }
@@ -263,13 +398,10 @@ matrix multiply_matrices(matrix a, matrix b)
 }
 
 // Function for multiplying a matrix by a scalar
-matrix scalar_multiply(matrix m, double scalar)
-{
+matrix scalar_multiply(matrix m, double scalar) {
     matrix result = create_matrix(m.rows, m.cols);
-    for (int i = 0; i < m.rows; i++)
-    {
-        for (int j = 0; j < m.cols; j++)
-        {
+    for (int i = 0; i < m.rows; i++) {
+        for (int j = 0; j < m.cols; j++) {
             result.data[i][j] = m.data[i][j] * scalar;
         }
     }
@@ -277,13 +409,10 @@ matrix scalar_multiply(matrix m, double scalar)
 }
 
 // Function for transposing matrix
-matrix transpose_matrix(matrix m)
-{
+matrix transpose_matrix(matrix m) {
     matrix result = create_matrix(m.cols, m.rows);
-    for (int i = 0; i < m.rows; i++)
-    {
-        for (int j = 0; j < m.cols; j++)
-        {
+    for (int i = 0; i < m.rows; i++) {
+        for (int j = 0; j < m.cols; j++) {
             result.data[j][i] = m.data[i][j];
         }
     }
@@ -291,17 +420,14 @@ matrix transpose_matrix(matrix m)
 }
 
 // Helper function to get minor matrix (submatrix excluding a row and column)
-matrix get_minor(matrix m, int row, int col)
-{
+matrix get_minor(matrix m, int row, int col) {
     matrix minor = create_matrix(m.rows - 1, m.cols - 1);
     int minor_row = 0, minor_col = 0;
-    for (int i = 0; i < m.rows; i++)
-    {
+    for (int i = 0; i < m.rows; i++) {
         if (i == row)
             continue;
         minor_col = 0;
-        for (int j = 0; j < m.cols; j++)
-        {
+        for (int j = 0; j < m.cols; j++) {
             if (j == col)
                 continue;
             minor.data[minor_row][minor_col] = m.data[i][j];
@@ -346,7 +472,8 @@ double determinant(matrix m) {
         double pivot = temp.data[i][i];
         det *= pivot;
         for (int k = i + 1; k < temp.rows; k++) {
-            if (pivot == 0.0) continue;
+            if (pivot == 0.0)
+                continue;
             double factor = temp.data[k][i] / pivot;
             for (int j = i; j < temp.cols; j++) {
                 temp.data[k][j] -= factor * temp.data[i][j];
@@ -358,28 +485,30 @@ double determinant(matrix m) {
 }
 
 // Helper function for Gaussian elimination
-void gaussian_elimination(matrix *m)
-{
+void gaussian_elimination(matrix *m) {
     int lead = 0;
-    for (int r = 0; r < m -> rows; r++) {
-        if (lead >= m -> cols) return;
+    for (int r = 0; r < m->rows; r++) {
+        if (lead >= m->cols)
+            return;
         int i = r;
-        while (m -> data[i][lead] == 0) {
+        while (m->data[i][lead] == 0) {
             i++;
             if (i == m->rows) {
                 i = r;
                 lead++;
-                if (lead == m -> cols) return;
+                if (lead == m->cols)
+                    return;
             }
         }
-        double *temp = m -> data[i];
-        m -> data[i] = m -> data[r];
-        m -> data[r] = temp;
-        for (i = r + 1; i < m -> rows; i++) {
-            if (m -> data[r][lead] == 0) continue;
-            double factor = m -> data[i][lead] / m -> data[r][lead];
-            for (int j = lead; j < m -> cols; j++) {
-                m -> data[i][j] -= factor * m -> data[r][j];
+        double *temp = m->data[i];
+        m->data[i] = m->data[r];
+        m->data[r] = temp;
+        for (i = r + 1; i < m->rows; i++) {
+            if (m->data[r][lead] == 0)
+                continue;
+            double factor = m->data[i][lead] / m->data[r][lead];
+            for (int j = lead; j < m->cols; j++) {
+                m->data[i][j] -= factor * m->data[r][j];
             }
         }
         lead++;
@@ -387,8 +516,7 @@ void gaussian_elimination(matrix *m)
 }
 
 // Function to find inverse matrix using Gauss-Jordan method
-matrix inverse_matrix(matrix m)
-{
+matrix inverse_matrix(matrix m) {
     if (m.rows != m.cols) {
         printf("Error: inverse is only defined for square matrices.\n");
         exit(1);
@@ -406,7 +534,8 @@ matrix inverse_matrix(matrix m)
     }
     for (int i = 0; i < m.rows; i++) {
         double pivot = aug.data[i][i];
-        if (pivot == 0) continue;
+        if (pivot == 0)
+            continue;
         for (int j = 0; j < 2 * m.cols; j++) {
             aug.data[i][j] /= pivot;
         }
@@ -430,8 +559,7 @@ matrix inverse_matrix(matrix m)
 }
 
 // Function to solve system of linear equations Ax = b
-matrix solve_system(matrix A, matrix b)
-{
+matrix solve_system(matrix A, matrix b) {
     if (A.rows != b.rows || b.cols != 1) {
         printf("Error: invalid dimensions for system solving.\n");
         exit(1);
@@ -450,7 +578,8 @@ matrix solve_system(matrix A, matrix b)
         for (int j = i + 1; j < A.cols; j++) {
             sum += aug.data[i][j] * x.data[j][0];
         }
-        if (aug.data[i][i] == 0) continue;
+        if (aug.data[i][i] == 0)
+            continue;
         x.data[i][0] = (aug.data[i][A.cols] - sum) / aug.data[i][i];
     }
     free_matrix(&aug);
@@ -458,8 +587,7 @@ matrix solve_system(matrix A, matrix b)
 }
 
 // Function to find rank of a matrix
-int rank(matrix m)
-{
+int rank(matrix m) {
     matrix temp = create_matrix(m.rows, m.cols);
     for (int i = 0; i < m.rows; i++) {
         for (int j = 0; j < m.cols; j++) {
@@ -476,7 +604,8 @@ int rank(matrix m)
                 break;
             }
         }
-        if (!zero_row) rank_count++;
+        if (!zero_row)
+            rank_count++;
     }
     free_matrix(&temp);
     return rank_count;
@@ -587,7 +716,7 @@ void power_method(matrix m, double *eigenvalue, matrix *eigenvector, int max_ite
     int n = m.rows;
     matrix v = create_matrix(n, 1);
     for (int i = 0; i < n; i++) {
-        v.data[i][0] = (double)rand() /RAND_MAX;
+        v.data[i][0] = (double)rand() / RAND_MAX;
     }
 
     double norm = 0.0;

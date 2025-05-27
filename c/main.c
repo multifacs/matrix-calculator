@@ -1,8 +1,8 @@
-#include <stdio.h>
+#include "matrix.h"
 #include <ctype.h>
+#include <stdio.h>
 #include <string.h>
 #include <time.h>
-#include "matrix.h"
 
 // TODO Add beter interface (colors?, GUI?)
 // TODO matrix format
@@ -12,8 +12,6 @@
 // TODO Web interface (WebAssebly?)
 // TODO save and load matricies
 // FIXME better matrix input
-
-
 
 void show_menu() {
     printf("MATRIX CALCULATOR\n");
@@ -55,7 +53,7 @@ int get_user_choice() {
     }
 }
 
-int input_positive_integer(const char* prompt) {
+int input_positive_integer(const char *prompt) {
     char input[100];
     int value;
     while (1) {
@@ -85,14 +83,17 @@ void input_random_matrix_params(int *rows, int *cols, double *min_val, double *m
     *cols = input_positive_integer("Enter number of cols: ");
     printf("Enter minimum value for elements: ");
     while (scanf("%lf", min_val) != 1) {
-        while (getchar() != '\n');
+        while (getchar() != '\n')
+            ;
         printf("Invalid input. Please enter a number.\n");
         printf("Enter minimum value for elements: ");
     }
-    while (getchar() != '\n');
+    while (getchar() != '\n')
+        ;
     printf("Enter maximum value for elements: ");
     while (scanf("%lf", max_val) != 1 || *max_val < *min_val) {
-        while (getchar() != '\n');
+        while (getchar() != '\n')
+            ;
         if (*max_val < *min_val) {
             printf("Maximum value must be greater than or equal to minimum value.\n");
         } else {
@@ -100,13 +101,55 @@ void input_random_matrix_params(int *rows, int *cols, double *min_val, double *m
         }
         printf("Enter maximum value for elements: ");
     }
-    while (getchar() != '\n');
+    while (getchar() != '\n')
+        ;
 }
 
+/**
+ * Creates a matrix with dimensions entered in one line ("rows cols"),
+ * then fills it using the standard input_matrix() function
+ *
+ * @return The created and filled matrix
+ */
 matrix input_matrix_new() {
-    int rows = input_positive_integer("Enter number of rows: ");
-    int cols = input_positive_integer("Enter number of columns: ");
-    matrix m = create_matrix(rows, cols);
+    char input[100];
+    int rows, cols;
+    matrix m = {0, 0, NULL}; // Initialize empty matrix
+
+    printf("Enter matrix dimensions (rows cols): ");
+
+    while (1) {
+        // Read entire line
+        if (fgets(input, sizeof(input), stdin) == NULL) {
+            fprintf(stderr, "Error reading input\n");
+            continue;
+        }
+
+        // Parse both integers from the line
+        int parsed = sscanf(input, "%d %d", &rows, &cols);
+
+        // Validate input
+        if (parsed != 2) {
+            printf("Please enter exactly two positive integers. Try again: ");
+            continue;
+        }
+
+        if (rows <= 0 || cols <= 0) {
+            printf("Dimensions must be positive. Try again: ");
+            continue;
+        }
+
+        // Create matrix
+        m = create_matrix(rows, cols);
+        if (m.data == NULL) {
+            printf("Failed to create matrix. Try again: ");
+            continue;
+        }
+
+        break;
+    }
+
+    // Fill matrix using existing function
     input_matrix(&m);
     return m;
 }
@@ -124,7 +167,8 @@ int input_scalar() {
 
 void wait_for_enter() {
     printf("Press Enter to continue...\n");
-    while (getchar() != '\n');
+    while (getchar() != '\n')
+        ;
 }
 
 int main() {
@@ -133,308 +177,304 @@ int main() {
     do {
         show_menu();
         choice = get_user_choice();
-        switch(choice) {
-            case 1: {
-                printf("Add two matrices:\n");
+        switch (choice) {
+        case 1: {
+            printf("Add two matrices:\n");
 
-                matrix a = input_matrix_new();
-                matrix b = input_matrix_new();
+            matrix a = input_matrix_new();
+            matrix b = input_matrix_new();
 
-                matrix result = add_matrices(a, b);
+            matrix result = add_matrices(a, b);
 
+            display_matrix(result);
+
+            free_matrix(&a);
+            free_matrix(&b);
+            free_matrix(&result);
+
+            wait_for_enter();
+            break;
+        }
+
+        case 2: {
+            printf("Subtract two matrices:\n");
+
+            matrix a = input_matrix_new();
+            matrix b = input_matrix_new();
+
+            matrix result = subtract_matrices(a, b);
+
+            display_matrix(result);
+
+            free_matrix(&a);
+            free_matrix(&b);
+            free_matrix(&result);
+
+            wait_for_enter();
+            break;
+        }
+
+        case 3: {
+            printf("Multiply two matrices:\n");
+
+            matrix a = input_matrix_new();
+            matrix b = input_matrix_new();
+
+            matrix result = multiply_matrices(a, b);
+
+            display_matrix(result);
+
+            free_matrix(&a);
+            free_matrix(&b);
+            free_matrix(&result);
+
+            wait_for_enter();
+            break;
+        }
+
+        case 4: {
+            printf("Multiply matrix by a scalar:\n");
+
+            matrix m = input_matrix_new();
+            double scalar = input_scalar();
+
+            matrix result = scalar_multiply(m, scalar);
+
+            display_matrix(result);
+
+            free_matrix(&m);
+            free_matrix(&result);
+
+            wait_for_enter();
+            break;
+        }
+
+        case 5: {
+            printf("Matrix transposition:\n");
+
+            matrix m = input_matrix_new();
+            matrix result = transpose_matrix(m);
+
+            display_matrix(result);
+
+            free_matrix(&m);
+            free_matrix(&result);
+
+            wait_for_enter();
+            break;
+        }
+
+        case 6: {
+            printf("Find determinant:\n");
+
+            matrix m = input_matrix_new();
+            if (m.rows != m.cols) {
+                printf("Error: determinant is valid only for square matrices.\n");
+            } else {
+                double det = determinant(m);
+                printf("Determinant: %lf\n", det);
+            }
+
+            free_matrix(&m);
+
+            wait_for_enter();
+            break;
+        }
+
+        case 7: {
+            printf("Find inverse matrix:\n");
+
+            matrix m = input_matrix_new();
+
+            if (m.rows != m.cols) {
+                printf("Error: inverse matrix is valid only for square matrices.\n");
+            } else {
+                matrix result = inverse_matrix(m);
                 display_matrix(result);
-
-                free_matrix(&a);
-                free_matrix(&b);
                 free_matrix(&result);
-
-                wait_for_enter();
-                break;
             }
 
-            case 2: {
-                printf("Subtract two matrices:\n");
+            free_matrix(&m);
 
-                matrix a = input_matrix_new();
-                matrix b = input_matrix_new();
+            wait_for_enter();
+            break;
+        }
 
-                matrix result = subtract_matrices(a, b);
+        case 8: {
+            printf("Solve SLE (Ax = B):\n");
 
+            printf("Input matrix A:\n");
+            matrix A = input_matrix_new();
+
+            printf("Input vector B:\n");
+            matrix B = input_matrix_new();
+
+            if (A.rows != B.rows || B.cols != 1) {
+                printf("Error: B must be a column vector with %d rows.\n", A.rows);
+            } else {
+                matrix x = solve_system(A, B);
+                display_matrix(x);
+                free_matrix(&x);
+            }
+
+            free_matrix(&A);
+            free_matrix(&B);
+
+            wait_for_enter();
+            break;
+        }
+
+        case 9: {
+            printf("Find rank of a matrix:\n");
+
+            matrix m = input_matrix_new();
+            int r = rank(m);
+
+            printf("Rank: %d\n", r);
+
+            free_matrix(&m);
+
+            wait_for_enter();
+            break;
+        }
+
+        case 10: {
+            printf("Generate random matrix:\n");
+
+            int rows, cols;
+            double min_val, max_val;
+
+            input_random_matrix_params(&rows, &cols, &min_val, &max_val);
+            matrix random_matrix = generate_random_matrix(rows, cols, min_val, max_val);
+
+            printf("Generate random matrix:\n");
+
+            print_matrix(random_matrix);
+
+            free_matrix(&random_matrix);
+
+            wait_for_enter();
+            break;
+        }
+
+        case 11: {
+            printf("Check matrix properites:\n");
+            matrix m = input_matrix_new();
+
+            printf("Matrix properties:\n");
+            printf("Diagonal: %s\n", is_diagonal(m) ? "Yes" : "No");
+            printf("Symmetric: %s\n", is_symmetric(m) ? "Yes" : "No");
+            printf("Upper triangular: %s\n", is_upper_triangular(m) ? "Yes" : "No");
+            printf("Lower triangular: %s\n", is_lower_triangular(m) ? "Yes" : "No");
+            printf("Identity: %s\n", is_identity(m) ? "Yes" : "No");
+
+            free_matrix(&m);
+
+            wait_for_enter();
+            break;
+        }
+
+        case 12: {
+            printf("Matrix exponentiation:\n");
+            matrix m = input_matrix_new();
+            if (m.rows != m.cols) {
+                printf("Error: matrix must be square.\n");
+            } else {
+                int exponent;
+                printf("Enter exponent: ");
+                scanf("%d", &exponent);
+                matrix result = matrix_power(m, exponent);
                 display_matrix(result);
-
-                free_matrix(&a);
-                free_matrix(&b);
                 free_matrix(&result);
-
-                wait_for_enter();
-                break;
             }
 
-            case 3: {
-                printf("Multiply two matrices:\n");
+            free_matrix(&m);
+            wait_for_enter();
+            break;
+        }
 
-                matrix a = input_matrix_new();
-                matrix b = input_matrix_new();
-
-                matrix result = multiply_matrices(a, b);
-
-                display_matrix(result);
-
-                free_matrix(&a);
-                free_matrix(&b);
-                free_matrix(&result);
-
-                wait_for_enter();
-                break;
+        case 13: {
+            printf("Cholesky decomposition:\n");
+            matrix m = input_matrix_new();
+            if (m.rows != m.cols) {
+                printf("Error: matris must be square.\n");
+            } else if (!is_symmetric(m)) {
+                printf("Error: matrix must be symmetric.\n");
+            } else {
+                matrix L = cholesky_decomposition(m);
+                printf("Lower triangular matrix L:\n");
+                display_matrix(L);
+                free_matrix(&L);
             }
 
-            case 4: {
-                printf("Multiply matrix by a scalar:\n");
+            free_matrix(&m);
+            wait_for_enter();
+            break;
+        }
 
-                matrix m = input_matrix_new();
-                double scalar = input_scalar();
-
-                matrix result = scalar_multiply(m, scalar);
-
-                display_matrix(result);
-
-                free_matrix(&m);
-                free_matrix(&result);
-
-                wait_for_enter();
-                break;
-            }
-            
-            case 5: {
-                printf("Matrix transposition:\n");
-
-                matrix m = input_matrix_new();
-                matrix result = transpose_matrix(m);
-
-                display_matrix(result);
-
-                free_matrix(&m);
-                free_matrix(&result);
-
-                wait_for_enter();
-                break;
+        case 14: {
+            printf("Eigenvalues and Eigenvectors:\n");
+            matrix m = input_matrix_new();
+            if (m.rows != m.cols) {
+                printf("Error: matrix must be square.\n");
+            } else {
+                double eigenvalue;
+                matrix eigenvector;
+                int max_iter = 1000;
+                double tol = 1e-6;
+                power_method(m, &eigenvalue, &eigenvector, max_iter, tol);
+                printf("Eigenvalue: %f\n", eigenvalue);
+                printf("Eigenvector:\n");
+                display_matrix(eigenvector);
+                free_matrix(&eigenvector);
             }
 
-            case 6: {
-                printf("Find determinant:\n");
+            free_matrix(&m);
+            wait_for_enter();
+            break;
+        }
 
-                matrix m = input_matrix_new();
-                if (m.rows != m.cols) {
-                    printf("Error: determinant is valid only for square matrices.\n");
-                } 
-                else {
-                    double det = determinant(m);
-                    printf("Determinant: %lf\n", det);
-                }
-
-                free_matrix(&m);
-
-                wait_for_enter();
-                break;
-            }
-            
-            case 7: {
-                printf("Find inverse matrix:\n");
-
-                matrix m = input_matrix_new();
-
-                if (m.rows != m.cols) {
-                    printf("Error: inverse matrix is valid only for square matrices.\n");
-                } 
-                else {
-                    matrix result = inverse_matrix(m);
-                    display_matrix(result);
-                    free_matrix(&result);
-                }
-
-                free_matrix(&m);
-
-                wait_for_enter();
-                break;
+        case 15: {
+            printf("LU decomposition:\n");
+            matrix m = input_matrix_new();
+            if (m.rows != m.cols) {
+                printf("Error: matrix must be square");
+            } else {
+                matrix L, U;
+                lu_decomposition(m, &L, &U);
+                printf("Lower triangular matrix L:\n");
+                display_matrix(L);
+                printf("Upper triangular matrix U:\n");
+                display_matrix(U);
+                free_matrix(&L);
+                free_matrix(&U);
             }
 
-            case 8: {
-                printf("Solve SLE (Ax = B):\n");
+            free_matrix(&m);
+            wait_for_enter();
+            break;
+        }
 
-                printf("Input matrix A:\n");
-                matrix A = input_matrix_new();
+        case 16: {
+            printf("Matrix norms:\n");
+            matrix m = input_matrix_new();
+            double f_norm = frobenius_norm(m);
+            double one_n = one_norm(m);
+            double inf_n = infinity_norm(m);
+            printf("Frobenius norm: %f\n", f_norm);
+            printf("One-norm: %f\n", one_n);
+            printf("Infinity norm: %f\n", inf_n);
 
-                printf("Input vector B:\n");
-                matrix B = input_matrix_new();
+            free_matrix(&m);
+            wait_for_enter();
+            break;
+        }
 
-                if (A.rows != B.rows || B.cols != 1) {
-                    printf("Error: B must be a column vector with %d rows.\n", A.rows);
-                }
-                else {
-                    matrix x = solve_system(A, B);
-                    display_matrix(x);
-                    free_matrix(&x);
-                }
-
-
-                free_matrix(&A);
-                free_matrix(&B);
-
-                wait_for_enter();
-                break;
-            }
-
-            case 9: {
-                printf("Find rank of a matrix:\n");
-
-                matrix m = input_matrix_new();
-                int r = rank(m);
-
-                printf("Rank: %d\n", r);
-
-                free_matrix(&m);
-
-                wait_for_enter();
-                break;
-            }
-
-            case 10: {
-                printf("Generate random matrix:\n");
-
-                int rows, cols;
-                double min_val, max_val;
-
-                input_random_matrix_params(&rows, &cols, &min_val, &max_val);
-                matrix random_matrix = generate_random_matrix(rows, cols, min_val, max_val);
-
-                printf("Generate random matrix:\n");
-
-                print_matrix(random_matrix);
-
-                free_matrix(&random_matrix);
-
-                wait_for_enter();
-                break;
-            }
-
-            case 11: {
-                printf("Check matrix properites:\n");
-                matrix m = input_matrix_new();
-                
-                printf("Matrix properties:\n");
-                printf("Diagonal: %s\n", is_diagonal(m) ? "Yes" : "No");
-                printf("Symmetric: %s\n", is_symmetric(m) ? "Yes" : "No");
-                printf("Upper triangular: %s\n", is_upper_triangular(m) ? "Yes" : "No");
-                printf("Lower triangular: %s\n", is_lower_triangular(m) ? "Yes" : "No");
-                printf("Identity: %s\n", is_identity(m) ? "Yes" : "No");
-
-                free_matrix(&m);
-                
-                wait_for_enter();
-                break;
-            }
-
-            case 12: {
-                printf("Matrix exponentiation:\n");
-                matrix m = input_matrix_new();
-                if (m.rows != m.cols) {
-                    printf("Error: matrix must be square.\n");
-                } else {
-                    int exponent;
-                    printf("Enter exponent: ");
-                    scanf("%d", &exponent);
-                    matrix result = matrix_power(m, exponent);
-                    display_matrix(result);
-                    free_matrix(&result);
-                }
-
-                free_matrix(&m);
-                wait_for_enter();
-                break;
-            }
-
-            case 13: {
-                printf("Cholesky decomposition:\n");
-                matrix m = input_matrix_new();
-                if (m.rows != m.cols) {
-                    printf("Error: matris must be square.\n");
-                } else if (!is_symmetric(m)) {
-                    printf("Error: matrix must be symmetric.\n");
-                } else {
-                    matrix L = cholesky_decomposition(m);
-                    printf("Lower triangular matrix L:\n");
-                    display_matrix(L);
-                    free_matrix(&L);
-                }
-                
-                free_matrix(&m);
-                wait_for_enter();
-                break;
-            }
-
-            case 14: {
-                printf("Eigenvalues and Eigenvectors:\n");
-                matrix m = input_matrix_new();
-                if (m.rows != m.cols) {
-                    printf("Error: matrix must be square.\n");
-                } else {
-                    double eigenvalue;
-                    matrix eigenvector;
-                    int max_iter = 1000;
-                    double tol = 1e-6;
-                    power_method(m, &eigenvalue, &eigenvector, max_iter, tol);
-                    printf("Eigenvalue: %f\n", eigenvalue);
-                    printf("Eigenvector:\n");
-                    display_matrix(eigenvector);
-                    free_matrix(&eigenvector);
-                }
-
-                free_matrix(&m);
-                wait_for_enter();
-                break;
-            }
-
-            case 15: {
-                printf("LU decomposition:\n");
-                matrix m = input_matrix_new();
-                if (m.rows != m.cols) {
-                    printf("Error: matrix must be square");
-                } else {
-                    matrix L, U;
-                    lu_decomposition(m, &L, &U);
-                    printf("Lower triangular matrix L:\n");
-                    display_matrix(L);
-                    printf("Upper triangular matrix U:\n");
-                    display_matrix(U);
-                    free_matrix(&L);
-                    free_matrix(&U);
-                }
-
-                free_matrix(&m);
-                wait_for_enter();
-                break;
-            }
-
-            case 16: {
-                printf("Matrix norms:\n");
-                matrix m = input_matrix_new();
-                double f_norm = frobenius_norm(m);
-                double one_n = one_norm(m);
-                double inf_n = infinity_norm(m);
-                printf("Frobenius norm: %f\n", f_norm);
-                printf("One-norm: %f\n", one_n);
-                printf("Infinity norm: %f\n", inf_n);
-
-                free_matrix(&m);
-                wait_for_enter();
-                break;
-            }
-        
-            case 17: 
-                printf("Exit...\n");
-                break;
-            default:
-                printf("Wrong choice. Please enter a number between 1 and 17.\n");
+        case 17:
+            printf("Exit...\n");
+            break;
+        default:
+            printf("Wrong choice. Please enter a number between 1 and 17.\n");
         }
     } while (choice != 17);
     return 0;
