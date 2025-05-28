@@ -1,6 +1,4 @@
-```
-make          # соберёт всё (C и Rust)
-make c        # соберёт только C
-make rust     # соберёт только Rust
-make clean    # удалит папку build
-```
+make          # Builds everything (C and Rust)
+make c        # Builds only C
+make rust     # Builds only Rust
+make clean    # Removes the build folder

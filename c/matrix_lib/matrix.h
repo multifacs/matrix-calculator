@@ -23,6 +23,9 @@ void free_matrix(matrix *m);
 // Input elements of matrix
 void input_matrix(matrix *m);
 
+// Input elements of column-vector
+void input_vector(int row);
+
 // Edit elements of matrix with validation
 void edit_matrix(matrix *m);
 
@@ -65,6 +68,9 @@ void gaussian_elimination(matrix *m);
 // Function for QR-algorithm to compute eigenvalues and eigenvectors
 void qr_algorithm(matrix m, matrix *eigenvalues, matrix *eigenvectors, int max_iter, double tol);
 
+// Function for QR-decomposition based on QR-algorithm
+void qr_decomposition(matrix m, matrix *Q, matrix *R);
+
 // Function for finding inverse matrix (Gaussian-Jordan method)
 matrix inverse_matrix(matrix m);
 
@@ -90,7 +96,7 @@ matrix matrix_power(matrix m, int exponent);
 matrix cholesky_decomposition(matrix m);
 
 // Function for LU-decomposition
-void lu_decomposition(matrix m, matrix *L, matrix *U);
+int lu_decomposition(matrix m, matrix *L, matrix *U);
 
 // Function for Schur decomposition
 void schur_decomposition(matrix m, matrix *Q, matrix *T, int max_iter, double tol);
@@ -106,6 +112,12 @@ double infinity_norm(matrix m);
 
 // Function for singular value decomposition
 void svd(matrix A, matrix *U, matrix *Sigma, matrix *V);
+
+int next_power_of_two(int n);
+
+matrix pad_matrix(matrix m, int new_rows, int new_cols);
+
+matrix multiply_matrices_strassen_padded(matrix a, matrix b);
 
 // Functions to check matrix properties
 int is_diagonal(matrix m);

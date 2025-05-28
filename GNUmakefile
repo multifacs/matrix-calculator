@@ -1,79 +1,73 @@
-# GNUmakefile — сборка hello world на C и Rust с размещением в отдельных папках
+# Specify path to C source files
+C_SRCS := c/main.c c/matrix_lib/matrix_core.c c/matrix_lib/matrix_decomposition.c c/matrix_lib/matrix_properties.c c/matrix_lib/matrix_advanced.c
 
-# Указываем путь к C-исходнику
-C_SRC := c/main.c
-
-# Указываем путь к Rust-исходнику
+# Specify path to Rust source file
 RUST_SRC := rust/main.rs
 
-# Общая папка, куда кладём бинарники
+# Common build directory for binaries
 BUILD_DIR := build
 
-# Путь к выходному файлу на C
+# Path to C output file
 C_OUT := $(BUILD_DIR)/c/hello_c
 
-# Путь к выходному файлу на Rust
+# Path to Rust output file
 RUST_OUT := $(BUILD_DIR)/rs/hello_rs
 
-# Путь к исходнику с тестами
+# Path to test source file
 TEST_SRC := tests/matrix_c/test_matrix.c
 
-# Путь к выходному файлу с тестами
+# Path to test output file
 TEST_OUT := $(BUILD_DIR)/test_matrix
 
-# Указываем компиляторы. Можно переопределить через командную строку:
-# make CC=clang RUSTC=rustc
+# Specify compilers
 CC := gcc
 RUSTC := rustc
 
-# .PHONY означает, что цели не соответствуют настоящим файлам — они всегда будут выполняться, если указаны.
+# Compilation flags
+CFLAGS := -I c/matrix_lib -lm -lcheck
+
+# .PHONY indicates targets that do not correspond to actual files
 .PHONY: all clean c rust test
 
-# Цель по умолчанию — собираем и C, и Rust
+## @brief Default target: builds both C and Rust programs
 all: c rust
 
 # ---- C BUILD ----
 
-# Цель для сборки C-программы
-# Зависит от результата сборки: $(C_OUT)
+## @brief Target to build the C program
+## @depends $(C_OUT) The compiled C output file
 c: $(C_OUT)
 
-# Правило сборки исполняемого файла из C-кода
-$(C_OUT): $(C_SRC)
-	# Создаём папку, если её ещё нет
+## @brief Rule to compile C source into an executable
+$(C_OUT): $(C_SRCS)
+	# Create build directory if it doesn't exist
 	@mkdir -p $(dir $@)
+	# Compile all C source files into hello_c
+	$(CC) $(C_SRCS) -o $@ $(CFLAGS)
 
-	# Компилируем main.c → hello_c
-	# $< — первый файл зависимости (c/main.c)
-	# $@ — цель (build/c/hello_c)
-	$(CC) $< c/matrix.c -o $@ -lm -lcheck
-
-# Правило сборки файла с тестами
-$(TEST_OUT): $(TEST_SRC) c/matrix.c
+## @brief Rule to compile test source file
+$(TEST_OUT): $(TEST_SRC) $(filter-out c/main.c, $(C_SRCS))
 	@mkdir -p $(BUILD_DIR)
-	$(CC) -I c -o $@ $(TEST_SRC) c/matrix.c -lcheck -lm
+	$(CC) -I c/matrix_lib -o $@ $(TEST_SRC) $(filter-out c/main.c, $(C_SRCS)) -lcheck -lm
 
-# Цель для сборки теста
+## @brief Target to build and run tests
 test: $(TEST_OUT)
 	./$(TEST_OUT)
 
 # ---- RUST BUILD ----
 
-# Цель для сборки Rust-программы
+## @brief Target to build the Rust program
 rust: $(RUST_OUT)
 
-# Правило сборки исполняемого файла из Rust-кода
+## @brief Rule to compile Rust source into an executable
 $(RUST_OUT): $(RUST_SRC)
-	# Создаём папку, если её ещё нет
+	# Create build directory if it doesn't exist
 	@mkdir -p $(dir $@)
-
-	# Компилируем main.rs → hello_rs
-	# $< — rust/main.rs
-	# $@ — build/rs/hello_rs
+	# Compile main.rs into hello_rs
 	$(RUSTC) $< -o $@
 
 # ---- CLEAN ----
 
-# Цель очистки — удаляет всю папку сборки
+## @brief Target to clean up the build directory
 clean:
 	rm -rf $(BUILD_DIR)
