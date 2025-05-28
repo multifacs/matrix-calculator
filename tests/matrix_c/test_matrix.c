@@ -423,7 +423,7 @@ START_TEST(test_matrix_norms) {
 }
 END_TEST
 
-// Тест для is_diagonal
+// Test for is_diagonal
 START_TEST(test_is_diagonal) {
     matrix diag = create_matrix(2, 2);
     diag.data[0][0] = 1; diag.data[0][1] = 0;
@@ -440,7 +440,7 @@ START_TEST(test_is_diagonal) {
 }
 END_TEST
 
-// Тест для is_symmetric
+// Test for is_symmetric
 START_TEST(test_is_symmetric) {
     matrix sym = create_matrix(2, 2);
     sym.data[0][0] = 1; sym.data[0][1] = 2;
@@ -457,7 +457,7 @@ START_TEST(test_is_symmetric) {
 }
 END_TEST
 
-// Тест для is_orthogonal
+// Test for is_orthogonal
 START_TEST(test_is_orthogonal) {
     matrix orth = create_matrix(2, 2);
     orth.data[0][0] = 0; orth.data[0][1] = 1;
@@ -474,7 +474,7 @@ START_TEST(test_is_orthogonal) {
 }
 END_TEST
 
-// Тест для is_upper_triangular
+// Test for is_upper_triangular
 START_TEST(test_is_upper_triangular) {
     matrix upper = create_matrix(2, 2);
     upper.data[0][0] = 1; upper.data[0][1] = 2;
@@ -491,7 +491,7 @@ START_TEST(test_is_upper_triangular) {
 }
 END_TEST
 
-// Тест для is_lower_triangular
+// Test for is_lower_triangular
 START_TEST(test_is_lower_triangular) {
     matrix lower = create_matrix(2, 2);
     lower.data[0][0] = 1; lower.data[0][1] = 0;
@@ -508,7 +508,7 @@ START_TEST(test_is_lower_triangular) {
 }
 END_TEST
 
-// Тест для is_identity
+// Test for is_identity
 START_TEST(test_is_identity) {
     matrix ident = create_matrix(2, 2);
     ident.data[0][0] = 1; ident.data[0][1] = 0;
@@ -525,86 +525,29 @@ START_TEST(test_is_identity) {
 }
 END_TEST
 
-// Тест для SVD
+// Test for SVD
 START_TEST(test_svd) {
-    // Создаем тестовую матрицу A размером 2x2
     matrix a = create_matrix(2, 2);
     a.data[0][0] = 1; a.data[0][1] = 2;
     a.data[1][0] = 3; a.data[1][1] = 4;
 
-    // Объявляем матрицы для результатов SVD
+
     matrix U, Sigma, V;
 
-    // Выполняем SVD
     svd(a, &U, &Sigma, &V);
 
-    // **Отладочный вывод для матрицы U**
-    printf("Matrix U (%d x %d):\n", U.rows, U.cols);
-    for (int i = 0; i < U.rows; i++) {
-        for (int j = 0; j < U.cols; j++) {
-            printf("%f ", U.data[i][j]);
-        }
-        printf("\n");
-    }
+    matrix temp = multiply_matrices(U, Sigma); 
+    matrix Vt = transpose_matrix(V);           
+    matrix reconstructed = multiply_matrices(temp, Vt); 
 
-    // **Отладочный вывод для матрицы Sigma**
-    printf("Matrix Sigma (%d x %d):\n", Sigma.rows, Sigma.cols);
-    for (int i = 0; i < Sigma.rows; i++) {
-        for (int j = 0; j < Sigma.cols; j++) {
-            printf("%f ", Sigma.data[i][j]);
-        }
-        printf("\n");
-    }
 
-    // **Отладочный вывод для матрицы V**
-    printf("Matrix V (%d x %d):\n", V.rows, V.cols);
-    for (int i = 0; i < V.rows; i++) {
-        for (int j = 0; j < V.cols; j++) {
-            printf("%f ", V.data[i][j]);
-        }
-        printf("\n");
-    }
-
-    // Восстановление матрицы A из U, Sigma, V
-    matrix temp = multiply_matrices(U, Sigma); // U * Sigma
-    matrix Vt = transpose_matrix(V);           // Транспонируем V
-    matrix reconstructed = multiply_matrices(temp, Vt); // (U * Sigma) * V^T
-
-    // **Отладочный вывод для матрицы temp (U * Sigma)**
-    printf("Matrix temp (U * Sigma) (%d x %d):\n", temp.rows, temp.cols);
-    for (int i = 0; i < temp.rows; i++) {
-        for (int j = 0; j < temp.cols; j++) {
-            printf("%f ", temp.data[i][j]);
-        }
-        printf("\n");
-    }
-
-    // **Отладочный вывод для матрицы Vt (V^T)**
-    printf("Matrix Vt (V^T) (%d x %d):\n", Vt.rows, Vt.cols);
-    for (int i = 0; i < Vt.rows; i++) {
-        for (int j = 0; j < Vt.cols; j++) {
-            printf("%f ", Vt.data[i][j]);
-        }
-        printf("\n");
-    }
-
-    // **Отладочный вывод для восстановленной матрицы reconstructed**
-    printf("Matrix reconstructed (temp * Vt) (%d x %d):\n", reconstructed.rows, reconstructed.cols);
-    for (int i = 0; i < reconstructed.rows; i++) {
-        for (int j = 0; j < reconstructed.cols; j++) {
-            printf("%f ", reconstructed.data[i][j]);
-        }
-        printf("\n");
-    }
-
-    // Проверка равенства восстановленной матрицы исходной с учетом погрешности
     for (int i = 0; i < a.rows; i++) {
         for (int j = 0; j < a.cols; j++) {
             ck_assert_double_eq_tol(reconstructed.data[i][j], a.data[i][j], 1e-3);
         }
     }
 
-    // Освобождаем память
+
     free_matrix(&a);
     free_matrix(&U);
     free_matrix(&Sigma);
@@ -615,7 +558,7 @@ START_TEST(test_svd) {
 }
 END_TEST
 
-// Тест для Schur decomposition
+// Test for Schur decomposition
 START_TEST(test_schur_decomposition) {
     matrix a = create_matrix(2, 2);
     a.data[0][0] = 1; a.data[0][1] = 2;
@@ -623,19 +566,13 @@ START_TEST(test_schur_decomposition) {
 
     matrix Q, T;
     schur_decomposition(a, &Q, &T, 1000, 1e-6);
-
-    // Проверка ортогональности Q
     ck_assert_int_eq(is_orthogonal(Q), 1);
-
-    // Проверка верхнетреугольности T
     ck_assert_int_eq(is_upper_triangular(T), 1);
 
-    // Восстановление матрицы A из Q и T
     matrix Qt = transpose_matrix(Q);
     matrix temp = multiply_matrices(Q, T);
     matrix reconstructed = multiply_matrices(temp, Qt);
 
-    // Проверка равенства восстановленной матрицы исходной с учетом погрешности
     for (int i = 0; i < a.rows; i++) {
         for (int j = 0; j < a.cols; j++) {
             ck_assert_double_eq_tol(reconstructed.data[i][j], a.data[i][j], 1e-6);
@@ -651,7 +588,7 @@ START_TEST(test_schur_decomposition) {
 }
 END_TEST
 
-// Тест для сложения нулевых матриц
+// Test for addition of zero matrices
 START_TEST(test_add_zero_matrices) {
     matrix a = create_matrix(2, 2);
     for (int i = 0; i < 2; i++) {
@@ -684,7 +621,7 @@ START_TEST(test_add_zero_matrices) {
 }
 END_TEST
 
-// Тест для умножения матриц с одним элементом
+// Test for singular matrices multiplication
 START_TEST(test_multiply_one_element_matrices) {
     matrix a = create_matrix(1, 1);
     a.data[0][0] = 5;
@@ -705,7 +642,7 @@ START_TEST(test_multiply_one_element_matrices) {
 }
 END_TEST
 
-// Тест для определителя нулевой матрицы
+// Test for determinant of zero matrix
 START_TEST(test_determinant_zero_matrix) {
     matrix a = create_matrix(2, 2);
     for (int i = 0; i < 2; i++) {
@@ -721,11 +658,11 @@ START_TEST(test_determinant_zero_matrix) {
 }
 END_TEST
 
-// Тест для обратной матрицы с нулевым определителем
+// Test for inverse matrix with determinant 0
 START_TEST(test_inverse_singular_matrix) {
     matrix a = create_matrix(2, 2);
     a.data[0][0] = 1; a.data[0][1] = 2;
-    a.data[1][0] = 2; a.data[1][1] = 4; // Определитель равен 0
+    a.data[1][0] = 2; a.data[1][1] = 4; 
 
     double det = determinant(a);
     ck_assert_double_eq_tol(det, 0.0, 1e-6);

@@ -1,7 +1,7 @@
-#include <stdio.h>    // Для вывода ошибок (printf)
-#include <stdlib.h>   // Для выделения памяти (malloc, free)
-#include <math.h>     // Для математических функций (sqrt, fabs)
-#include "matrix.h"   // Для структуры matrix и прототипов функций
+#include <stdio.h>   
+#include <stdlib.h>  
+#include <math.h>    
+#include "matrix.h"  
 #include "../constants.h"
 
 /* 
@@ -153,12 +153,11 @@ int lu_decomposition(matrix m, matrix *L, matrix *U) {
         }
     }
 
-    // LU-decomposition
     for (int k = 0; k < n; k++) {
         if (fabs((*U).data[k][k]) < TOLERANCE) { 
             free_matrix(L);
             free_matrix(U);
-            return 1; // Matrix is singular
+            return 1; 
         }
         for (int i = k + 1; i < n; i++) {
             double factor = (*U).data[i][k] / (*U).data[k][k];
@@ -176,15 +175,12 @@ void svd(matrix A, matrix *U, matrix *Sigma, matrix *V) {
     int m = A.rows;
     int n = A.cols;
 
-    // Вычисление A^T A
     matrix At = transpose_matrix(A);
     matrix AtA = multiply_matrices(At, A); // n x n
 
-    // QR-алгоритм для A^T A
     matrix eigenvalues_V, eigenvectors_V;
     qr_algorithm(AtA, &eigenvalues_V, &eigenvectors_V, 2000, 1e-10);
 
-    // Вычисление и сортировка сингулярных значений
     int min_dim = (m < n) ? m : n;
     double *singular_values = malloc(min_dim * sizeof(double));
     int *indices = malloc(min_dim * sizeof(int));
@@ -192,7 +188,7 @@ void svd(matrix A, matrix *U, matrix *Sigma, matrix *V) {
         singular_values[i] = sqrt(fabs(eigenvalues_V.data[i][0]));
         indices[i] = i;
     }
-    // Сортировка по убыванию (пузырьковая)
+
     for (int i = 0; i < min_dim - 1; i++) {
         for (int j = 0; j < min_dim - i - 1; j++) {
             if (singular_values[j] < singular_values[j + 1]) {
@@ -206,7 +202,6 @@ void svd(matrix A, matrix *U, matrix *Sigma, matrix *V) {
         }
     }
 
-    // Формирование матрицы V
     *V = create_matrix(n, n);
     for (int j = 0; j < n; j++) {
         for (int i = 0; i < n; i++) {
@@ -214,7 +209,6 @@ void svd(matrix A, matrix *U, matrix *Sigma, matrix *V) {
         }
     }
 
-    // Формирование матрицы Sigma
     *Sigma = create_matrix(m, n);
     for (int i = 0; i < m; i++) {
         for (int j = 0; j < n; j++) {
@@ -225,7 +219,6 @@ void svd(matrix A, matrix *U, matrix *Sigma, matrix *V) {
         (*Sigma).data[i][i] = singular_values[i];
     }
 
-    // Вычисление Sigma^{-1} (псевдообратной)
     matrix Sigma_inv = create_matrix(n, m);
     for (int i = 0; i < n; i++) {
         for (int j = 0; j < m; j++) {
@@ -238,25 +231,22 @@ void svd(matrix A, matrix *U, matrix *Sigma, matrix *V) {
         }
     }
 
-    // Вычисление U = A * V * Sigma^{-1}
     matrix temp = multiply_matrices(A, *V);
     *U = multiply_matrices(temp, Sigma_inv);
 
-    // Нормализация столбцов U
     for (int j = 0; j < (*U).cols; j++) {
         double norm = 0.0;
         for (int i = 0; i < (*U).rows; i++) {
             norm += (*U).data[i][j] * (*U).data[i][j];
         }
         norm = sqrt(norm);
-        if (norm > 1e-10) { // Защита от деления на ноль
+        if (norm > 1e-10) { 
             for (int i = 0; i < (*U).rows; i++) {
                 (*U).data[i][j] /= norm;
             }
         }
     }
 
-    // Освобождение памяти
     free(singular_values);
     free(indices);
     free_matrix(&At);

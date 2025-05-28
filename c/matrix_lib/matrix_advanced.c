@@ -1,7 +1,7 @@
-#include <stdio.h>    // Для вывода ошибок (printf)
-#include <stdlib.h>   // Для выделения памяти (malloc, free)
-#include <math.h>     // Для математических функций (fabs, sqrt)
-#include "matrix.h"   // Для структуры matrix и прототипов функций
+#include <stdio.h>    
+#include <stdlib.h> 
+#include <math.h>    
+#include "matrix.h" 
 #include "../constants.h"
 
 /* 
@@ -133,12 +133,12 @@ matrix solve_system(matrix A, matrix b) {
         free_matrix(&y);
         return x;
     } else if (m > n) {
-        // Переопределенная система: метод наименьших квадратов
+        // Minimal square method
         matrix At = transpose_matrix(A);
         matrix AtA = multiply_matrices(At, A);
         matrix Atb = multiply_matrices(At, b);
 
-        // Решаем (A^T A) x = A^T b с помощью LU-разложения
+        // LU-decomposition
         matrix L, U;
         int status = lu_decomposition(AtA, &L, &U);
         if (status == 1) {
@@ -175,10 +175,10 @@ matrix solve_system(matrix A, matrix b) {
         free_matrix(&y);
         return x;
     } else {
-        // Недоопределенная система: псевдообратная матрица
+        // Pseudoinverse matrix
         matrix At = transpose_matrix(A);
         matrix AAt = multiply_matrices(A, At);
-        matrix inv_AAt = inverse_matrix(AAt); // Предполагается, что A A^T обратима
+        matrix inv_AAt = inverse_matrix(AAt);
 
         matrix A_pseudo = multiply_matrices(At, inv_AAt);
         matrix x = multiply_matrices(A_pseudo, b);

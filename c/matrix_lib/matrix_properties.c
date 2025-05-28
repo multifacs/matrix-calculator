@@ -1,5 +1,5 @@
-#include <math.h>     // Для функции fabs
-#include "matrix.h"   // Для структуры matrix и прототипов функций
+#include <math.h>    
+#include "matrix.h"  
 #include "../constants.h"
 
 // Helper function to check if a number is a power of two

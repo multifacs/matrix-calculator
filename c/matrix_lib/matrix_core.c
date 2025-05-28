@@ -1,9 +1,9 @@
-#include <stdio.h>    // Для ввода-вывода (printf, scanf)
-#include <stdlib.h>   // Для выделения памяти (malloc, free)
-#include <string.h>   // Для работы со строками (strlen в print_matrix)
-#include <math.h>     // Для математических функций (fabs, fmod)
-#include <time.h>     // Для генерации случайных чисел (rand в generate_random_matrix)
-#include "matrix.h"   // Для структуры matrix и прототипов функций
+#include <stdio.h>    
+#include <stdlib.h>  
+#include <string.h>  
+#include <math.h>     
+#include <time.h>     
+#include "matrix.h"  
 #include "../constants.h"
 
 /* 
@@ -15,7 +15,6 @@ matrix create_matrix(int rows, int cols) {
     m.rows = rows;
     m.cols = cols;
 
-    // Выделяем память для строк
     m.data = (double**)malloc(rows * sizeof(double*));
     if (m.data == NULL) {
         fprintf(stderr, "%sError: Failed to allocate memory for matrix rows.\n%s", URED, COLOR_RESET);
@@ -26,7 +25,6 @@ matrix create_matrix(int rows, int cols) {
     for (int i = 0; i < rows; i++) {
         m.data[i] = (double*)malloc(cols * sizeof(double));
         if (m.data[i] == NULL) {
-            // Освобождаем уже выделенную память перед выходом
             for (int k = 0; k < i; k++) {
                 free(m.data[k]);
             }
