@@ -1,5 +1,5 @@
 # Specify path to C source files
-C_SRCS := c/main.c c/matrix_lib/matrix_core.c c/matrix_lib/matrix_decomposition.c c/matrix_lib/matrix_properties.c c/matrix_lib/matrix_advanced.c
+C_SRCS := c/main.c c/ui.c c/utils.c c/operations.c c/matrix_lib/matrix_core.c c/matrix_lib/matrix_decomposition.c c/matrix_lib/matrix_properties.c c/matrix_lib/matrix_advanced.c c/matrix_lib/matrix_special.c
 
 # Specify path to Rust source file
 RUST_SRC := rust/main.rs
@@ -24,7 +24,7 @@ CC := gcc
 RUSTC := rustc
 
 # Compilation flags
-CFLAGS := -I c/matrix_lib -lm -lcheck
+CFLAGS := -I c/ -I c/matrix_lib -lm -lcheck
 
 # .PHONY indicates targets that do not correspond to actual files
 .PHONY: all clean c rust test
@@ -48,7 +48,7 @@ $(C_OUT): $(C_SRCS)
 ## @brief Rule to compile test source file
 $(TEST_OUT): $(TEST_SRC) $(filter-out c/main.c, $(C_SRCS))
 	@mkdir -p $(BUILD_DIR)
-	$(CC) -I c/matrix_lib -o $@ $(TEST_SRC) $(filter-out c/main.c, $(C_SRCS)) -lcheck -lm
+	$(CC) -I c/ -I c/matrix_lib -o $@ $(TEST_SRC) $(filter-out c/main.c, $(C_SRCS)) -lcheck -lm
 
 ## @brief Target to build and run tests
 test: $(TEST_OUT)
